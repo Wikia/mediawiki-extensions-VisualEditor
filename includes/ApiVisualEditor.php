@@ -15,7 +15,6 @@ use MediaWiki\Revision\RevisionRecord;
 use Wikimedia\ParamValidator\ParamValidator;
 
 class ApiVisualEditor extends ApiBase {
-
 	use ApiBlockInfoTrait;
 	use ApiParsoidTrait;
 
@@ -211,7 +210,10 @@ class ApiVisualEditor extends ApiBase {
 						$content = '';
 						if ( $title->getNamespace() == NS_MEDIAWIKI && $params['section'] !== 'new' ) {
 							// If this is a system message, get the default text.
-							$content = $title->getDefaultMessageText();
+							$msg = $title->getDefaultMessageText();
+							if ( $msg !== false ) {
+								$content = $title->getDefaultMessageText();
+							}
 						}
 						Hooks::run( 'EditFormPreloadText', [ &$content, &$title ] );
 						if ( $content === '' && !empty( $params['preload'] ) ) {
@@ -598,7 +600,7 @@ class ApiVisualEditor extends ApiBase {
 	/**
 	 * Gets the relevant HTML for the latest log entry on a given title, including a full log link.
 	 *
-	 * @param Title $title Title
+	 * @param Title $title
 	 * @param array|string $types
 	 * @return string
 	 */

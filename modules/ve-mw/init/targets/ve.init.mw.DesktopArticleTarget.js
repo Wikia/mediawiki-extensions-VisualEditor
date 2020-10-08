@@ -139,7 +139,6 @@ ve.init.mw.DesktopArticleTarget.static.compatibility = {
 	// containing an inequality (<,>,<=,>=) and a version number
 	supportedList: {
 		chrome: [ [ '>=', 19 ] ],
-		iceweasel: [ [ '>=', 10 ] ],
 		opera: [ [ '>=', 15 ] ],
 		// All versions not in unsupportedList are fully supported:
 		firefox: null,
@@ -265,13 +264,13 @@ ve.init.mw.DesktopArticleTarget.prototype.setupToolbar = function ( surface ) {
 		}
 
 		this.toolbarSetupDeferred.done( function () {
-			var surface = target.getSurface();
+			var newSurface = target.getSurface();
 			// Check the surface wasn't torn down while the toolbar was animating
-			if ( surface ) {
+			if ( newSurface ) {
 				ve.track( 'trace.initializeToolbar.enter', { mode: mode } );
 				target.getToolbar().initialize();
-				surface.getView().emit( 'position' );
-				surface.getContext().updateDimensions();
+				newSurface.getView().emit( 'position' );
+				newSurface.getContext().updateDimensions();
 				ve.track( 'trace.initializeToolbar.exit', { mode: mode } );
 				ve.track( 'trace.activate.exit', { mode: mode } );
 			}
@@ -903,7 +902,7 @@ ve.init.mw.DesktopArticleTarget.prototype.onViewTabClick = function ( e ) {
  * @inheritdoc
  */
 ve.init.mw.DesktopArticleTarget.prototype.saveComplete = function ( data ) {
-	var newUrlParams, watchChecked, watch,
+	var newUrlParams, watch,
 		target = this;
 
 	// Parent method
@@ -926,10 +925,12 @@ ve.init.mw.DesktopArticleTarget.prototype.saveComplete = function ( data ) {
 		// User logged in if module loaded.
 		if ( mw.loader.getState( 'mediawiki.page.watch.ajax' ) === 'ready' ) {
 			watch = require( 'mediawiki.page.watch.ajax' );
-			watchChecked = this.checkboxesByName.wpWatchthis && this.checkboxesByName.wpWatchthis.isSelected();
+
 			watch.updateWatchLink(
 				$( '#ca-watch a, #ca-unwatch a' ),
-				watchChecked ? 'unwatch' : 'watch'
+				data.watched ? 'unwatch' : 'watch',
+				'idle',
+				data.watchlistexpiry
 			);
 		}
 
@@ -1305,13 +1306,16 @@ ve.init.mw.DesktopArticleTarget.prototype.restorePage = function () {
  * @param {Event} e Native event object
  */
 ve.init.mw.DesktopArticleTarget.prototype.onWindowPopState = function ( e ) {
-	var veaction;
+	var veaction, oldUri,
+		target = this;
 
 	if ( !this.verifyPopState( e.state ) ) {
 		// Ignore popstate events fired for states not created by us
 		// This also filters out the initial fire in Chrome (T59901).
 		return;
 	}
+
+	oldUri = this.currentUri;
 
 	this.currentUri = new mw.Uri( location.href );
 	veaction = this.currentUri.query.veaction;
@@ -1331,7 +1335,15 @@ ve.init.mw.DesktopArticleTarget.prototype.onWindowPopState = function ( e ) {
 	}
 	if ( this.active && veaction !== 'edit' && veaction !== 'editsource' ) {
 		this.actFromPopState = true;
-		this.tryTeardown( false, 'navigate-back' );
+		// "Undo" the pop-state, as the event is not cancellable
+		history.pushState( this.popState, document.title, oldUri );
+		this.currentUri = oldUri;
+		this.tryTeardown( false, 'navigate-back' ).then( function () {
+			// Teardown was successful, re-apply the undone state
+			history.back();
+		} ).always( function () {
+			target.actFromPopState = false;
+		} );
 	}
 };
 

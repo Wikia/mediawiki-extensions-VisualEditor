@@ -70,6 +70,9 @@ trait ApiParsoidTrait {
 		} elseif ( $wgVisualEditorParsoidAutoConfig ) {
 			$params = $vrs['modules']['parsoid'] ?? [];
 			$params['restbaseCompat'] = true;
+			// forward cookies on private wikis
+			$params['forwardCookies'] = !MediaWikiServices::getInstance()
+				->getPermissionManager()->isEveryoneAllowed( 'read' );
 		} else {
 			// No global modules defined, so no way to contact the document server.
 			$this->dieWithError( 'apierror-visualeditor-docserver-unconfigured', 'no_vrs' );
@@ -249,17 +252,18 @@ trait ApiParsoidTrait {
 
 		// Adapted from RESTBase mwUtil.parseETag()
 		// ETag is not expected when creating a new page (oldid=0)
-		if ( $oldid && !preg_match( '/
+		if ( $oldid && !( preg_match( '/
 			^(?:W\\/)?"?
-			([^"\\/]+)
+			' . preg_quote( "$oldid", '/' ) . '
 			(?:\\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}))
 			(?:\\/([^"]+))?
 			"?$
-		/x', $etag ) ) {
+		/x', $etag ) ) ) {
 			$this->getLogger()->info(
-				__METHOD__ . ": Received funny ETag from client: {etag}",
+				__METHOD__ . ": Received funny ETag from client: '{etag}'",
 				[
 					'etag' => $etag,
+					'oldid' => $oldid,
 					'requestPath' => $path,
 				]
 			);
@@ -300,7 +304,7 @@ trait ApiParsoidTrait {
 	/**
 	 * Get the page language from a title, using the content language as fallback on special pages
 	 *
-	 * @param Title $title Title
+	 * @param Title $title
 	 * @return Language Content language
 	 */
 	public static function getPageLanguage( Title $title ) : Language {

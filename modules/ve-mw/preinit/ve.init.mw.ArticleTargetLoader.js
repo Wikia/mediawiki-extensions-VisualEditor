@@ -19,7 +19,7 @@
  */
 ( function () {
 	var prefName, prefValue,
-		uri = new mw.Uri(),
+		uri, editintro,
 		namespaces = mw.config.get( 'wgNamespaceIds' ),
 		conf = mw.config.get( 'wgVisualEditorConfig' ),
 		pluginCallbacks = [],
@@ -27,8 +27,16 @@
 			// Add modules from $wgVisualEditorPluginModules
 			.concat( conf.pluginModules.filter( mw.loader.getState ) );
 
+	try {
+		uri = new mw.Uri();
+		editintro = uri.query.editintro;
+	} catch ( e ) {
+		// URI may not be parseable (T106244)
+		uri = false;
+	}
 	// Provide the new wikitext editor
 	if (
+		uri &&
 		conf.enableWikitext &&
 		(
 			mw.user.options.get( 'visualeditor-newwikitext' ) ||
@@ -120,6 +128,13 @@
 						options = checkboxesDef[ name ],
 						accesskey = null,
 						title = null;
+
+					// Non-checkbox fields are permitted in the 'checkboxes' definitions (since MW
+					// core 4fa7d4d7), but VE doesn't yet support them.
+					// @TODO Remove this and properly support watchlist expiry and other widgets.
+					if ( options.class !== undefined && options.class !== 'OOUI\\CheckboxInputWidget' ) {
+						return;
+					}
 
 					// The messages documented below are just the ones defined in core.
 					// Extensions may add other checkboxes.
@@ -280,7 +295,7 @@
 				page: pageName,
 				badetag: options.badetag,
 				uselang: mw.config.get( 'wgUserLanguage' ),
-				editintro: uri.query.editintro,
+				editintro: editintro,
 				preload: options.preload,
 				preloadparams: options.preloadparams,
 				formatversion: 2
@@ -315,7 +330,7 @@
 				}
 			}
 			if ( !apiPromise ) {
-				apiPromise = apiXhr.then( function ( data, jqxhr ) {
+				apiPromise = apiXhr.then( function ( response, jqxhr ) {
 					ve.track( 'trace.apiLoad.exit', { mode: 'visual' } );
 					ve.track( 'mwtiming.performance.system.apiLoad', {
 						bytes: require( 'mediawiki.String' ).byteLength( jqxhr.responseText ),
@@ -324,11 +339,11 @@
 						targetName: options.targetName,
 						mode: 'visual'
 					} );
-					if ( data.visualeditor ) {
-						data.visualeditor.switched = switched;
-						data.visualeditor.fromEditedState = fromEditedState;
+					if ( response.visualeditor ) {
+						response.visualeditor.switched = switched;
+						response.visualeditor.fromEditedState = fromEditedState;
 					}
-					return data;
+					return response;
 				} );
 			}
 
@@ -387,7 +402,7 @@
 					} );
 				}
 				restbasePromise = restbaseXhr.then(
-					function ( data, status, jqxhr ) {
+					function ( response, status, jqxhr ) {
 						ve.track( 'trace.restbaseLoad.exit', { mode: 'visual' } );
 						ve.track( 'mwtiming.performance.system.restbaseLoad', {
 							bytes: require( 'mediawiki.String' ).byteLength( jqxhr.responseText ),
@@ -395,7 +410,7 @@
 							targetName: options.targetName,
 							mode: 'visual'
 						} );
-						return [ data, jqxhr.getResponseHeader( 'etag' ) ];
+						return [ response, jqxhr.getResponseHeader( 'etag' ) ];
 					},
 					function ( xhr, code, _ ) {
 						if ( xhr.status === 404 ) {
@@ -477,7 +492,7 @@
 				paction: 'wikitext',
 				page: pageName,
 				uselang: mw.config.get( 'wgUserLanguage' ),
-				editintro: uri.query.editintro,
+				editintro: editintro,
 				preload: options.preload,
 				preloadparams: options.preloadparams,
 				formatversion: 2

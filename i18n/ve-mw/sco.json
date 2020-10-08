@@ -4,7 +4,8 @@
 			"AmaryllisGardener",
 			"Amire80",
 			"Foxj",
-			"John Reid"
+			"John Reid",
+			"MJL"
 		]
 	},
 	"tooltip-ca-createsource": "Cræft the soorce code o this page",
@@ -46,7 +47,7 @@
 	"visualeditor-dialog-media-page-advanced": "Advanced settins",
 	"visualeditor-dialog-media-page-general": "General settins",
 	"visualeditor-dialog-media-position-center": "Center",
-	"visualeditor-dialog-media-position-checkbox": "Wrap tex aroond this eetem",
+	"visualeditor-dialog-media-position-checkbox": "Wrap tex aroond this item",
 	"visualeditor-dialog-media-position-checkbox-help": "Ye can mak this media item shaw inlin wi the text o the page in stead o flaitin. Ye shud ainly dae this seendle, syne it will brak up the flowe o the text gin ye unpick this box.",
 	"visualeditor-dialog-media-position-left": "Cair",
 	"visualeditor-dialog-media-position-none": "Nane",
@@ -148,7 +149,6 @@
 	"visualeditor-editnotices-tool": "$1 {{PLURAL:$1|notice|notices}}",
 	"visualeditor-editnotices-tooltip": "Eidit notices",
 	"visualeditor-editsummary": "Describe whit ye chynged",
-	"visualeditor-editsummary-bytes-remaining": "The nummer o bytes left",
 	"visualeditor-formatdropdown-format-mw-heading1": "Page title",
 	"visualeditor-formatdropdown-format-mw-heading2": "Heidin",
 	"visualeditor-formatdropdown-format-mw-heading3": "Sub-heidin 1",
