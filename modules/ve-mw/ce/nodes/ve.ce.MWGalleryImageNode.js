@@ -1,7 +1,7 @@
 /*!
  * VisualEditor ContentEditable MWGalleryImageNode class.
  *
- * @copyright 2011-2019 VisualEditor Team and others; see AUTHORS.txt
+ * @copyright 2011-2020 VisualEditor Team and others; see AUTHORS.txt
  * @license The MIT License (MIT); see LICENSE.txt
  */
 
@@ -18,7 +18,7 @@
 ve.ce.MWGalleryImageNode = function VeCeMWGalleryImageNode( model ) {
 	var attributes, galleryMwAttrs, mode, imagePadding,
 		outerDivWidth, imageHeight, innerDivHeight, innerDivMargin, innerDivWidth,
-		$outerDiv, $thumbDiv, $innerDiv, $a, $img,
+		$thumbDiv, $innerDiv, $a, $img, resourceTitle,
 		defaults = mw.config.get( 'wgVisualEditorConfig' ).galleryOptions;
 
 	// Parent constructor
@@ -26,12 +26,11 @@ ve.ce.MWGalleryImageNode = function VeCeMWGalleryImageNode( model ) {
 
 	// DOM hierarchy for MWGalleryImageNode:
 	//   <li> this.$element (gallerybox)
-	//     <div> outerDiv
-	//       <div> thumbDiv
-	//         <div> innerDiv
-	//           <a> a
-	//             <img> img
-	//       <a> filenameA (galleryfilename)
+	//     <div> thumbDiv
+	//       <figure-inline> innerDiv
+	//         <a> a
+	//           <img> img
+	//     <a> filenameA (galleryfilename)
 	//     <figcaption> ve.ce.MWGalleryImageCaptionNode
 
 	attributes = model.getAttributes();
@@ -61,16 +60,16 @@ ve.ce.MWGalleryImageNode = function VeCeMWGalleryImageNode( model ) {
 		outerDivWidth = innerDivWidth + 4;
 	}
 
+	resourceTitle = mw.Title.newFromText( attributes.resource );
+
 	this.$element
 		.addClass( 'gallerybox' )
-		.css( 'width', outerDivWidth + 'px' );
-	$outerDiv = $( '<div>' )
 		.css( 'width', outerDivWidth + 'px' );
 	$thumbDiv = $( '<div>' )
 		.addClass( 'thumb' )
 		.css( 'width', innerDivWidth + 'px' )
 		.css( 'height', innerDivHeight + 'px' );
-	$innerDiv = $( '<div>' )
+	$innerDiv = $( '<figure-inline>' )
 		.css( 'margin', innerDivMargin );
 	$a = $( '<a>' )
 		.addClass( 'image' );
@@ -82,20 +81,18 @@ ve.ce.MWGalleryImageNode = function VeCeMWGalleryImageNode( model ) {
 		.attr( 'width', attributes.width );
 	this.$filenameA = $( '<a>' )
 		.attr( 'href', '#' ) // Just to make it look like a link
-		.text( mw.Title.newFromText( attributes.resource ).getMainText() )
+		.text( resourceTitle ? resourceTitle.getMainText() : attributes.resource )
 		.toggleClass( 'oo-ui-element-hidden', galleryMwAttrs.showfilename !== 'yes' );
 
 	this.$element.prepend(
-		$outerDiv.append(
-			$thumbDiv.append(
-				$innerDiv.append(
-					$a.append(
-						$img
-					)
+		$thumbDiv.append(
+			$innerDiv.append(
+				$a.append(
+					$img
 				)
-			),
-			this.$filenameA
-		)
+			)
+		),
+		this.$filenameA
 	);
 
 	this.model.parent.connect( this, { attributeChange: 'onGalleryAttributeChange' } );
@@ -123,7 +120,7 @@ ve.ce.MWGalleryImageNode.prototype.onGalleryAttributeChange = function ( key, fr
 
 ve.ce.MWGalleryImageNode.prototype.getDomPosition = function () {
 	// We need to override this because this.$element can have children other than renderings of child
-	// CE nodes (specifically, the image, this.$outerDiv), which throws the calculations out of whack.
+	// CE nodes (specifically, the image, this.$thumbDiv), which throws the calculations out of whack.
 	// Luckily, MWGalleryImageNode is very simple and can contain at most one other node: its caption,
 	// which is always inserted at the end.
 	var domNode = this.$element.last()[ 0 ];
