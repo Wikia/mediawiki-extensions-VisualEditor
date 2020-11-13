@@ -341,8 +341,15 @@ ve.dm.MWTemplateModel.prototype.serialize = function () {
 		template = { target: this.getTarget(), params: {} },
 		params = this.getParameters();
 
+	if ( !template.originalParams ) {
+		template.originalParams = this.originalData ? Object.keys( this.originalData.params ) : [];
+	}
+
 	for ( name in params ) {
 		if ( name === '' ) {
+			continue;
+		}
+		if ( params[name].getValue() === '' && template.originalParams.indexOf( name ) === -1 ) {
 			continue;
 		}
 		origName = params[ name ].getOriginalName();
