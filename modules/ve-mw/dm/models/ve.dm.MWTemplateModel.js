@@ -348,7 +348,7 @@ ve.dm.MWTemplateModel.prototype.serialize = function () {
 		// Fandom change
 		// Prevent adding empty template parameters if they were not present in the source wikitext
 		// https://phabricator.wikimedia.org/T101075
-		if ( params[name].getValue() === '' && origParams.indexOf( name ) === -1 ) {
+		if ( params[name].getValue() === '' && !origParams.hasOwnProperty( name ) ) {
 			continue;
 		}
 		// end Fandom change
