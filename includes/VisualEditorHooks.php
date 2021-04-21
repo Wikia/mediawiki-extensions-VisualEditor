@@ -257,7 +257,11 @@ class VisualEditorHooks {
 			return true;
 		}
 
-		if ( self::isSupportedEditPage( $title, $user, $req ) ) {
+		// Fandom change: Add a hook to let extensions disable the VE on a per-page basis
+		if (
+			Hooks::run( 'VisualEditorSupportedEditPage', [ $article->getContext() ] ) &&
+			self::isSupportedEditPage( $title, $user, $req )
+		) {
 			$params = $req->getValues();
 			$params['venoscript'] = '1';
 			$url = wfScript() . '?' . wfArrayToCgi( $params );
