@@ -1334,6 +1334,7 @@
 
 						toolFactory.register( mw.libs.ve.MWEditModeVisualTool );
 						toolFactory.register( mw.libs.ve.MWEditModeSourceTool );
+						toolFactory.register( mw.libs.ve.MWEditModeVisualSourceTool );
 						switchToolbar = new OO.ui.Toolbar( toolFactory, toolGroupFactory, {
 							classes: [ 've-init-mw-editSwitch' ]
 						} );

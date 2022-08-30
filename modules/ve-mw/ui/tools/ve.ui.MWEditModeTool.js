@@ -89,3 +89,29 @@ ve.ui.MWEditModeVisualTool.prototype.switch = function () {
 	this.toolbar.getTarget().switchToVisualEditor();
 };
 ve.ui.toolFactory.register( ve.ui.MWEditModeVisualTool );
+
+/**
+ * MediaWiki UserInterface edit mode visual-source tool.
+ *
+ * @class
+ * @extends mw.libs.ve.MWEditModeVisualSourceTool
+ * @mixins ve.ui.MWEditModeTool
+ * @constructor
+ * @param {OO.ui.ToolGroup} toolGroup
+ * @param {Object} [config] Config options
+ */
+ ve.ui.MWEditModeVisualSourceTool = function VeUiMWEditModeVisualSourceTool() {
+	// Parent constructor
+	ve.ui.MWEditModeVisualSourceTool.super.apply( this, arguments );
+	// Mixin constructor
+	ve.ui.MWEditModeTool.call( this );
+};
+OO.inheritClass( ve.ui.MWEditModeVisualSourceTool, mw.libs.ve.MWEditModeVisualSourceTool );
+OO.mixinClass( ve.ui.MWEditModeVisualSourceTool, ve.ui.MWEditModeTool );
+/**
+ * @inheritdoc
+ */
+ve.ui.MWEditModeVisualSourceTool.prototype.switch = function () {
+	this.toolbar.getTarget().edit();
+};
+ve.ui.toolFactory.register( ve.ui.MWEditModeVisualSourceTool );

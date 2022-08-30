@@ -114,9 +114,9 @@ mw.libs.ve.MWEditModeSourceTool.static.editMode = 'source';
 mw.libs.ve.MWEditModeSourceTool.static.name = 'editModeSource';
 mw.libs.ve.MWEditModeSourceTool.static.icon = 'wikiText';
 mw.libs.ve.MWEditModeSourceTool.static.title =
-	OO.ui.deferMsg( 'visualeditor-mweditmodesource-tool-current' );
+	OO.ui.deferMsg( 'visualeditor-fandom-mweditmodesource-tool-current' );
 mw.libs.ve.MWEditModeSourceTool.static.unavailableTooltip =
-	OO.ui.deferMsg( 'visualeditor-mweditmodesource-tool-unavailable' );
+	OO.ui.deferMsg( 'visualeditor-fandom-mweditmodesource-tool-unavailable' );
 
 /**
  * MediaWiki edit mode visual tool.
@@ -136,6 +136,28 @@ mw.libs.ve.MWEditModeVisualTool.static.editMode = 'visual';
 mw.libs.ve.MWEditModeVisualTool.static.name = 'editModeVisual';
 mw.libs.ve.MWEditModeVisualTool.static.icon = 'eye';
 mw.libs.ve.MWEditModeVisualTool.static.title =
-	OO.ui.deferMsg( 'visualeditor-mweditmodeve-tool-current' );
+	OO.ui.deferMsg( 'visualeditor-fandom-mweditmodeve-tool-current' );
 mw.libs.ve.MWEditModeVisualTool.static.unavailableTooltip =
-	OO.ui.deferMsg( 'visualeditor-mweditmodeve-tool-unavailable' );
+	OO.ui.deferMsg( 'visualeditor-fandom-mweditmodeve-tool-unavailable' );
+
+/**
+ * MediaWiki edit mode visual-source tool.
+ *
+ * @class
+ * @extends mw.libs.ve.MWEditModeTool
+ * @constructor
+ * @param {OO.ui.ToolGroup} toolGroup
+ * @param {Object} [config] Config options
+ */
+ mw.libs.ve.MWEditModeVisualSourceTool = function VeUiMWEditModeVisualSourceTool() {
+	// Parent constructor
+	mw.libs.ve.MWEditModeVisualSourceTool.super.apply( this, arguments );
+};
+OO.inheritClass( mw.libs.ve.MWEditModeVisualSourceTool, mw.libs.ve.MWEditModeTool );
+mw.libs.ve.MWEditModeVisualSourceTool.static.editMode = 'source';
+mw.libs.ve.MWEditModeVisualSourceTool.static.name = 'editModeSource';
+mw.libs.ve.MWEditModeVisualSourceTool.static.icon = 'wikiText';
+mw.libs.ve.MWEditModeVisualSourceTool.static.title =
+	OO.ui.deferMsg( 'visualeditor-fandom-mweditmodevisualsource-tool-current' );
+mw.libs.ve.MWEditModeVisualSourceTool.static.unavailableTooltip =
+	OO.ui.deferMsg( 'visualeditor-fandom-mweditmodevisualsource-tool-unavailable' );
