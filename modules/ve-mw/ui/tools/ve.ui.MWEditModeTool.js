@@ -91,27 +91,29 @@ ve.ui.MWEditModeVisualTool.prototype.switch = function () {
 ve.ui.toolFactory.register( ve.ui.MWEditModeVisualTool );
 
 /**
- * MediaWiki UserInterface edit mode visual-source tool.
+ * MediaWiki UserInterface edit mode basic source tool (VE 2010 source mode).
  *
  * @class
- * @extends mw.libs.ve.MWEditModeVisualSourceTool
+ * @extends mw.libs.ve.MWEditModeBasicSourceTool
  * @mixins ve.ui.MWEditModeTool
  * @constructor
  * @param {OO.ui.ToolGroup} toolGroup
  * @param {Object} [config] Config options
  */
- ve.ui.MWEditModeVisualSourceTool = function VeUiMWEditModeVisualSourceTool() {
+ ve.ui.MWEditModeBasicSourceTool = function VeUiMWEditModeBasicSourceTool() {
 	// Parent constructor
-	ve.ui.MWEditModeVisualSourceTool.super.apply( this, arguments );
+	ve.ui.MWEditModeBasicSourceTool.super.apply( this, arguments );
 	// Mixin constructor
 	ve.ui.MWEditModeTool.call( this );
 };
-OO.inheritClass( ve.ui.MWEditModeVisualSourceTool, mw.libs.ve.MWEditModeVisualSourceTool );
-OO.mixinClass( ve.ui.MWEditModeVisualSourceTool, ve.ui.MWEditModeTool );
+OO.inheritClass( ve.ui.MWEditModeBasicSourceTool, mw.libs.ve.MWEditModeBasicSourceTool );
+OO.mixinClass( ve.ui.MWEditModeBasicSourceTool, ve.ui.MWEditModeTool );
 /**
  * @inheritdoc
  */
-ve.ui.MWEditModeVisualSourceTool.prototype.switch = function () {
-	this.toolbar.getTarget().edit();
+ve.ui.MWEditModeBasicSourceTool.prototype.switch = function () {
+	//this.toolbar.getTarget().editSourceBasic();
+	this.toolbar.getTarget().onUpdateState();
+	window.location.href = window.location.pathname + '?action=edit&editorType=oldwikitext';
 };
-ve.ui.toolFactory.register( ve.ui.MWEditModeVisualSourceTool );
+ve.ui.toolFactory.register( ve.ui.MWEditModeBasicSourceTool );

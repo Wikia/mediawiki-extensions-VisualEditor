@@ -117,7 +117,7 @@ ve.init.mw.DesktopArticleTarget.static.actionGroups = [
 		title: ve.msg( 'visualeditor-mweditmode-tooltip' ),
 		label: ve.msg( 'visualeditor-mweditmode-tooltip' ),
 		invisibleLabel: true,
-		include: [ 'editModeVisual', 'editModeSource' ]
+		include: [ 'editModeVisual', 'editModeSource', 'editModeBasicSource' ]
 	},
 	{
 		name: 'save',

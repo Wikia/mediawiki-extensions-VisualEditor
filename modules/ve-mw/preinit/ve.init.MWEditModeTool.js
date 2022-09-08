@@ -141,7 +141,7 @@ mw.libs.ve.MWEditModeVisualTool.static.unavailableTooltip =
 	OO.ui.deferMsg( 'visualeditor-fandom-mweditmodeve-tool-unavailable' );
 
 /**
- * MediaWiki edit mode visual-source tool.
+ * MediaWiki edit mode basic source tool. (VE source tool 2010)
  *
  * @class
  * @extends mw.libs.ve.MWEditModeTool
@@ -149,15 +149,16 @@ mw.libs.ve.MWEditModeVisualTool.static.unavailableTooltip =
  * @param {OO.ui.ToolGroup} toolGroup
  * @param {Object} [config] Config options
  */
- mw.libs.ve.MWEditModeVisualSourceTool = function VeUiMWEditModeVisualSourceTool() {
+ mw.libs.ve.MWEditModeBasicSourceTool = function VeUiMWEditModeBasicSourceTool() {
 	// Parent constructor
-	mw.libs.ve.MWEditModeVisualSourceTool.super.apply( this, arguments );
+	mw.libs.ve.MWEditModeBasicSourceTool.super.apply( this, arguments );
 };
-OO.inheritClass( mw.libs.ve.MWEditModeVisualSourceTool, mw.libs.ve.MWEditModeTool );
-mw.libs.ve.MWEditModeVisualSourceTool.static.editMode = 'source';
-mw.libs.ve.MWEditModeVisualSourceTool.static.name = 'editModeSource';
-mw.libs.ve.MWEditModeVisualSourceTool.static.icon = 'wikiText';
-mw.libs.ve.MWEditModeVisualSourceTool.static.title =
-	OO.ui.deferMsg( 'visualeditor-fandom-mweditmodevisualsource-tool-current' );
-mw.libs.ve.MWEditModeVisualSourceTool.static.unavailableTooltip =
-	OO.ui.deferMsg( 'visualeditor-fandom-mweditmodevisualsource-tool-unavailable' );
+OO.inheritClass( mw.libs.ve.MWEditModeBasicSourceTool, mw.libs.ve.MWEditModeTool );
+mw.libs.ve.MWEditModeBasicSourceTool.static.editMode = 'source';
+mw.libs.ve.MWEditModeBasicSourceTool.static.name = 'editModeBasicSource';
+mw.libs.ve.MWEditModeBasicSourceTool.static.icon = 'wikiText';
+mw.libs.ve.MWEditModeBasicSourceTool.static.title =
+	OO.ui.deferMsg( 'visualeditor-fandom-mweditmodebasicsource-tool-current' );
+mw.libs.ve.MWEditModeBasicSourceTool.static.unavailableTooltip =
+	OO.ui.deferMsg( 'visualeditor-fandom-mweditmodebasicsource-tool-unavailable' );
+	

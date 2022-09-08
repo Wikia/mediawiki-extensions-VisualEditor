@@ -1334,7 +1334,7 @@
 
 						toolFactory.register( mw.libs.ve.MWEditModeVisualTool );
 						toolFactory.register( mw.libs.ve.MWEditModeSourceTool );
-						toolFactory.register( mw.libs.ve.MWEditModeVisualSourceTool );
+						toolFactory.register( mw.libs.ve.MWEditModeBasicSourceTool );
 						switchToolbar = new OO.ui.Toolbar( toolFactory, toolGroupFactory, {
 							classes: [ 've-init-mw-editSwitch' ]
 						} );
@@ -1353,7 +1353,7 @@
 							title: mw.msg( 'visualeditor-mweditmode-tooltip' ),
 							label: mw.msg( 'visualeditor-mweditmode-tooltip' ),
 							invisibleLabel: true,
-							include: [ 'editModeVisual', 'editModeSource' ]
+							include: [ 'editModeVisual', 'editModeSource', 'editModeBasicSource' ]
 						} ] );
 
 						popup = new mw.libs.ve.SwitchPopupWidget( 'source' );
