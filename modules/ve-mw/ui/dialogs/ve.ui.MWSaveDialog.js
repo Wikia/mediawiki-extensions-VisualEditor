@@ -628,6 +628,7 @@ ve.ui.MWSaveDialog.prototype.initialize = function () {
 		expanded: false,
 		padded: true
 	} );
+	this.$previewHeading = $( '<h1>' ).addClass( 'firstHeading' );
 	this.$previewViewer = $( '<div>' ).addClass( 'mw-body-content mw-parser-output' );
 	this.previewPanel.$element
 		// Make focusable for keyboard accessible scrolling
@@ -635,6 +636,7 @@ ve.ui.MWSaveDialog.prototype.initialize = function () {
 		.append(
 			$( '<div>' ).addClass( 'mw-content-container' ).append(
 				$( '<div>' ).addClass( 'mw-body' ).append(
+					this.$previewHeading,
 					this.$previewViewer
 				)
 			)
