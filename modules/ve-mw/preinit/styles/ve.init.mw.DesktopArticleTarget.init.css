@@ -76,6 +76,9 @@
 .ve-activated .ve-init-mw-desktopArticleTarget-originalContent #catlinks a {
 	opacity: 1;
 }
+.mw-ext-cite-error {
+	display: inline !important;
+}
 
 .ve-activated #content {
 	position: relative;
