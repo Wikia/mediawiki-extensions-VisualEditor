@@ -41,6 +41,7 @@
 		plugins = [],
 		welcomeDialogDisabled = false,
 		educationPopupsDisabled = false,
+		mutationObserver,
 		// Defined after document-ready below
 		$targetContainer = null;
 
@@ -1002,6 +1003,51 @@
 				// Allow instant switching to edit mode, without refresh
 				$caVeEdit.off( '.ve-target' ).on( 'click.ve-target', init.onEditTabClick.bind( init, 'visual' ) );
 			}
+			// FANDOM change
+			const pageSideEdit = $('.page-side-edit');
+			// There are cases when "edit" button is not rendered via PHP template since "edit" action is not present
+			// Which means that user doesn't have permissions to create / edit / view source of the page
+			if (pageSideEdit.length) {
+				if (pageSideEdit[0].href.includes('veaction')) {
+					$('.page-side-edit').off( '.ve-target' ).on( 'click.ve-target', init.onEditTabClick.bind( init, 'visual' ) );
+				} else {
+					$('.page-side-edit').off( '.ve-target' ).on( 'click.ve-target', init.onEditTabClick.bind( init, 'source' ) );
+				}
+			}
+			$('.mw-editsection a:not(.mw-editsection-visualeditor)').off( '.ve-target' ).on( 'click.ve-target', init.onEditSectionLinkClick.bind( init, 'source' ) );
+
+			const wrapperNode = document.querySelector('.highlight__actions');
+			const config = { childList: true };
+
+			mutationObserver = new MutationObserver((mutationsList, observer) => {
+				mutationsList.forEach((mutation) => {
+					if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+						const addedNode = mutation.addedNodes[0];
+						if (addedNode && addedNode.querySelector('[data-testid="highlight-action_edit-section"]')) {
+							this.preloadModules();
+							const editButton = addedNode.querySelector('[data-testid="highlight-action_edit-section"]');
+							if (pageSideEdit.length) {
+								if (pageSideEdit[0].href.includes('veaction')) {
+									editButton.addEventListener('click', init.onEditTabClick.bind(init, 'visual'));
+								} else {
+									editButton.addEventListener('click', init.onEditTabClick.bind(init, 'source'));
+								}
+							}
+						}
+					}
+				});
+			});
+
+			if (wrapperNode) {
+				mutationObserver.observe(wrapperNode, config);
+			}
+
+			// Preload VisualEditor scripts
+			$caEdit.on('mouseover.ve-target-source', this.preloadModules.bind(this));
+			$caVeEdit.on('mouseover.ve-target', this.preloadModules.bind(this));
+			$('.mw-editsection').on('mouseover.ve-target-section', this.preloadModules.bind(this));
+			$('.page-side-edit').on('mouseover.ve-target-float', this.preloadModules.bind(this));
+			// FANDOM change
 			if ( pageCanLoadEditor ) {
 				// Always bind "Edit source" tab, because we want to handle switching with changes
 				$caEdit.off( '.ve-target' ).on( 'click.ve-target', init.onEditTabClick.bind( init, 'source' ) );
@@ -1020,6 +1066,12 @@
 				}
 			}
 		},
+
+		// FANDOM change
+		preloadModules: function () {
+			mw.loader.using(['ext.visualEditor.switching', 'ext.visualEditor.articleTarget', 'ext.visualEditor.core.desktop']);
+		},
+		// FANDOM change
 
 		/**
 		 * Setup multiple section links (edit + edit source)
@@ -1157,7 +1209,10 @@
 		 * @param {string} [section] Override edit section, taken from link URL if not specified
 		 */
 		onEditSectionLinkClick: function ( mode, e, section ) {
-			const link = $( e.target ).closest( 'a' )[ 0 ];
+			// FANDOM change
+			// const link = $( e.target ).closest( 'a' )[ 0 ];
+			const link = $( e.currentTarget ).closest( 'a' )[ 0 ];
+			// FANDOM change
 			if ( !link || !link.href ) {
 				// Not a real link, probably added by a gadget or another extension (T328094)
 				return;
@@ -1170,7 +1225,12 @@
 				// Modified click (e.g. ctrl+click)
 				!init.isUnmodifiedLeftClick( e ) ||
 				// Not an edit action
-				!( linkUrl.searchParams.has( 'action' ) || linkUrl.searchParams.has( 'veaction' ) ) ||
+
+				// FANDOM change
+				// !( linkUrl.searchParams.has( 'action' ) || linkUrl.searchParams.has( 'veaction' ) ) ||
+				!( linkUrl.searchParams.has( 'veaction' ) ) ||
+				// FANDOM change
+
 				// Edit target is on another host (e.g. commons file)
 				linkUrl.host !== location.host ||
 				// Title param doesn't match current page
@@ -1632,6 +1692,12 @@
 					} );
 
 				init.stopShowingWelcomeDialog();
+
+				// FANDOM change
+				if ( mutationObserver ) {
+					mutationObserver.detach();
+				}
+				// FANDOM change
 			} );
 		}
 
