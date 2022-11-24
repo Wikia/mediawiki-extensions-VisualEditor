@@ -41,6 +41,8 @@ ve.ce.MWBlockImageNode = function VeCeMWBlockImageNode() {
 		$focusable = $missingImage;
 	} else {
 		$image = $( '<img>' )
+			.attr('loading', 'lazy')
+			.attr('decoding', 'async')
 			.attr( 'src', this.getResolvedAttribute( 'src' ) );
 		this.$a = $( '<a>' )
 			.addClass( 'image' )
