@@ -911,9 +911,9 @@
 				pTabsId = isMinerva ? 'page-actions' :
 					$( '#p-views' ).length ? 'p-views' : 'p-cactions',
 				// Minerva puts the '#ca-...' ids on <a> nodes
-				$caSource = $( 'li#ca-viewsource' ),
-				$caEdit = $( 'li#ca-edit, li#page-actions-edit' ),
-				$caVeEdit = $( 'li#ca-ve-edit' ),
+				$caSource = $( '#ca-viewsource' ),
+				$caEdit = $( '#ca-edit, #page-actions-edit' ),
+				$caVeEdit = $( '#ca-ve-edit' ),
 				$caEditLink = $caEdit.find( 'a' ),
 				$caVeEditLink = $caVeEdit.find( 'a' ),
 				caVeEditNextnode =
@@ -986,6 +986,12 @@
 			} else if ( pageCanLoadEditor ) {
 				// Allow instant switching to edit mode, without refresh
 				$caVeEdit.off( '.ve-target' ).on( 'click.ve-target', init.onEditTabClick.bind( init, 'visual' ) );
+				$caVeEdit.on( 'mouseover.ve-target', function () {
+					// Load VisualEditor
+					mw.loader.using('ext.visualEditor.switching');
+					mw.loader.using('ext.visualEditor.articleTarget');
+					mw.loader.using('ext.visualEditor.core.desktop');
+				});
 			}
 			if ( pageCanLoadEditor ) {
 				// Always bind "Edit source" tab, because we want to handle switching with changes
