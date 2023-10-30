@@ -46,8 +46,17 @@
 
 	// FANDOM - UGC-3932 Experiment - start
 	function isUserInExperiment() {
-		var cookieValue = document.cookie.replace(/(?:(?:^|.*;\s*)experiment-ve-loading\s*\=\s*([^;]*).*$)|^.*$/, "$1");
-		return cookieValue === 'true';
+		var cookieValue = getCookie('experiment-ve-loading');
+		return cookieValue === 'normal' || cookieValue === 'faster';
+	}
+	function isUserInControlGroup() {
+		var cookieValue = getCookie('experiment-ve-loading');
+		return cookieValue === 'normal';
+	}
+	function getCookie(name) {
+		const value = `; ${document.cookie}`;
+		const parts = value.split(`; ${name}=`);
+		if (parts.length === 2) return parts.pop().split(';').shift();
 	}
 	// FANDOM - UGC-3932 Experiment - end
 
@@ -929,14 +938,16 @@
 						$caEdit.next().get( 0 );
 
 			// FANDOM - UGC-3932 experiment start
-			if ( isUserInExperiment() ) {
+			if ( isUserInExperiment() && !isUserInControlGroup() ) {
 				$caSource = $( '#ca-viewsource' );
 				$caEdit = $( '#ca-edit, #page-actions-edit' );
 				$caVeEdit = $( '#ca-ve-edit' );
 				if (window.location.search.includes('action')) {
 					ve.track('ve.preload-experiment', { status: 'available-direct' });
-				} else {
-					ve.track('ve.preload-experiment', { status: 'available-fast' });
+				}
+			} else if ( isUserInControlGroup() ) {
+				if (window.location.search.includes('action')) {
+					ve.track('ve.preload-experiment', { status: 'unavailable-direct' });
 				}
 			}
 			// FANDOM - UGC-3932 experiment end
@@ -1007,10 +1018,10 @@
 				// Allow instant switching to edit mode, without refresh
 				$caVeEdit.off( '.ve-target' ).on( 'click.ve-target', init.onEditTabClick.bind( init, 'visual' ) );
 				// FANDOM - UGC-3932 experiment start
-				if ( isUserInExperiment() ) {
+				if ( isUserInExperiment() && !isUserInControlGroup() ) {
 					// Preload VisualEditor scripts
-					$caEdit.on('mouseover.ve-target-source', this.preloadVeScripts.bind(this));
-					$caVeEdit.on('mouseover.ve-target', this.preloadVeScripts.bind(this));
+					$caEdit.on('mouseover.ve-target-source', this.preloadModules.bind(this));
+					$caVeEdit.on('mouseover.ve-target', this.preloadModules.bind(this));
 				}
 				// FANDOM - UGC-3932 experiment end
 			}
@@ -1048,10 +1059,8 @@
 		},
 
 		// FANDOM - UGC-3932 experiment start
-		preloadVeScripts: function () {
-			mw.loader.using(['ext.visualEditor.switching', 'ext.visualEditor.articleTarget', 'ext.visualEditor.core.desktop']).then(function() {
-				ve.track('ve.preload-experiment', { status: 'preloaded' });
-			})
+		preloadModules: function () {
+			mw.loader.using(['ext.visualEditor.switching', 'ext.visualEditor.articleTarget', 'ext.visualEditor.core.desktop']);
 		},
 		// FANDOM - UGC-3932 experiment end
 
@@ -1177,7 +1186,7 @@
 				return;
 			}
 
-			if ( isUserInExperiment() ) {
+			if ( isUserInExperiment() && !isUserInControlGroup() ) {
 				ve.track('ve.preload-experiment', { status: 'success' });
 			}
 
