@@ -44,6 +44,13 @@
 			document.getElementById( 'content' )
 		);
 
+	// FANDOM - UGC-3932 Experiment - start
+	function isUserInExperiment() {
+		var cookieValue = document.cookie.replace(/(?:(?:^|.*;\s*)experiment-ve-loading\s*\=\s*([^;]*).*$)|^.*$/, "$1");
+		return cookieValue === 'true';
+	}
+	// FANDOM - UGC-3932 Experiment - end
+
 	function showLoading( /* mode */ ) {
 		if ( isLoading ) {
 			return;
@@ -921,6 +928,19 @@
 						$caEdit.get( 0 ) :
 						$caEdit.next().get( 0 );
 
+			// FANDOM - UGC-3932 experiment start
+			if ( isUserInExperiment() ) {
+				$caSource = $( '#ca-viewsource' );
+				$caEdit = $( '#ca-edit, #page-actions-edit' );
+				$caVeEdit = $( '#ca-ve-edit' );
+				if (window.location.search.includes('action')) {
+					ve.track('ve.preload-experiment', { status: 'available-direct' });
+				} else {
+					ve.track('ve.preload-experiment', { status: 'available-fast' });
+				}
+			}
+			// FANDOM - UGC-3932 experiment end
+
 			if ( !$caVeEdit.length ) {
 				// The below duplicates the functionality of VisualEditorHooks::onSkinTemplateNavigation()
 				// in case we're running on a cached page that doesn't have these tabs yet.
@@ -986,6 +1006,13 @@
 			} else if ( pageCanLoadEditor ) {
 				// Allow instant switching to edit mode, without refresh
 				$caVeEdit.off( '.ve-target' ).on( 'click.ve-target', init.onEditTabClick.bind( init, 'visual' ) );
+				// FANDOM - UGC-3932 experiment start
+				if ( isUserInExperiment() ) {
+					// Preload VisualEditor scripts
+					$caEdit.on('mouseover.ve-target-source', this.preloadVeScripts.bind(this));
+					$caVeEdit.on('mouseover.ve-target', this.preloadVeScripts.bind(this));
+				}
+				// FANDOM - UGC-3932 experiment end
 			}
 			if ( pageCanLoadEditor ) {
 				// Always bind "Edit source" tab, because we want to handle switching with changes
@@ -1019,6 +1046,14 @@
 				}
 			}
 		},
+
+		// FANDOM - UGC-3932 experiment start
+		preloadVeScripts: function () {
+			mw.loader.using(['ext.visualEditor.switching', 'ext.visualEditor.articleTarget', 'ext.visualEditor.core.desktop']).then(function() {
+				ve.track('ve.preload-experiment', { status: 'preloaded' });
+			})
+		},
+		// FANDOM - UGC-3932 experiment end
 
 		setupMultiSectionLinks: function () {
 			var $editsections = $( '#mw-content-text .mw-editsection' ),
@@ -1140,6 +1175,10 @@
 			e.preventDefault();
 			if ( isLoading ) {
 				return;
+			}
+
+			if ( isUserInExperiment() ) {
+				ve.track('ve.preload-experiment', { status: 'success' });
 			}
 
 			var section = $( e.target ).closest( '#ca-addsection' ).length ? 'new' : null;
