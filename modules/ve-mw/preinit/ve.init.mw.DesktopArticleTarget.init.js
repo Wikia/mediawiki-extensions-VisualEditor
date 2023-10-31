@@ -13,6 +13,10 @@
 // TODO: ve.now and ve.track should be moved to mw.libs.ve
 /* global ve */
 
+// FANDOM - UGC-3932 Experiment - start
+var isExperimentTrackingSuccess = false;
+// FANDOM - UGC-3932 Experiment - end
+
 /**
  * Platform preparation for the MediaWiki view page. This loads (when user needs it) the
  * actual MediaWiki integration and VisualEditor library.
@@ -1186,8 +1190,9 @@
 				return;
 			}
 
-			if ( isUserInExperiment() && !isUserInControlGroup() ) {
+			if ( isUserInExperiment() && !isUserInControlGroup() && !isExperimentTrackingSuccess ) {
 				ve.track('ve.preload-experiment', { status: 'success' });
+				isExperimentTrackingSuccess = true;
 			}
 
 			var section = $( e.target ).closest( '#ca-addsection' ).length ? 'new' : null;
