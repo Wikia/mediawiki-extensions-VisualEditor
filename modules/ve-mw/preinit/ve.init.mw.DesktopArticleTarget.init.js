@@ -1023,6 +1023,8 @@ var isExperimentTrackingSuccess = false;
 				$caVeEdit.off( '.ve-target' ).on( 'click.ve-target', init.onEditTabClick.bind( init, 'visual' ) );
 				// FANDOM - UGC-3932 experiment start
 				if ( isUserInExperiment() && !isUserInControlGroup() ) {
+					$('.mw-editsection').off( '.ve-target' ).on( 'click.ve-target', init.onEditTabClick.bind( init, 'visual' ) );
+					$('.page-side-edit').off( '.ve-target' ).on( 'click.ve-target', init.onEditTabClick.bind( init, 'visual' ) );
 					// Preload VisualEditor scripts
 					$caEdit.on('mouseover.ve-target-source', this.preloadModules.bind(this));
 					$caVeEdit.on('mouseover.ve-target', this.preloadModules.bind(this));
@@ -1032,6 +1034,12 @@ var isExperimentTrackingSuccess = false;
 			if ( pageCanLoadEditor ) {
 				// Always bind "Edit source" tab, because we want to handle switching with changes
 				$caEdit.off( '.ve-target' ).on( 'click.ve-target', init.onEditTabClick.bind( init, 'source' ) );
+				// FANDOM - UGC-3932 experiment start
+				if ( isUserInExperiment() && !isUserInControlGroup() ) {
+					$('.mw-editsection').off( '.ve-target' ).on( 'click.ve-target', init.onEditTabClick.bind( init, 'source' ) );
+					$('.page-side-edit').off( '.ve-target' ).on( 'click.ve-target', init.onEditTabClick.bind( init, 'source' ) );
+				}
+				// FANDOM - UGC-3932 experiment end
 			}
 			if ( pageCanLoadEditor && init.isWikitextAvailable ) {
 				// Only bind "Add topic" tab if NWE is available, because VE doesn't support section
