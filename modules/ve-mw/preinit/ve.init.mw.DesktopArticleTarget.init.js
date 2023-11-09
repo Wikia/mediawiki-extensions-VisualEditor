@@ -1028,6 +1028,8 @@ var isExperimentTrackingSuccess = false;
 					// Preload VisualEditor scripts
 					$caEdit.on('mouseover.ve-target-source', this.preloadModules.bind(this));
 					$caVeEdit.on('mouseover.ve-target', this.preloadModules.bind(this));
+					$('.mw-editsection').on('mouseover.ve-target-section', this.preloadModules.bind(this));
+					$('.page-side-edit').on('mouseover.ve-target-float', this.preloadModules.bind(this));
 				}
 				// FANDOM - UGC-3932 experiment end
 			}
