@@ -343,6 +343,7 @@ var isExperimentTrackingSuccess = false;
 		// hardcode desktop here.
 		initData.platform = 'desktop';
 		ve.track( 'mwedit.init', initData );
+
 		mw.libs.ve.activationStart = ve.now();
 	}
 
@@ -531,6 +532,14 @@ var isExperimentTrackingSuccess = false;
 	 */
 	function activateTarget( mode, section, tPromise, modified ) {
 		var dataPromise;
+
+		// FANDOM - UGC-3932 experiment start
+		if ( isUserInExperiment() && !isUserInControlGroup() && !isExperimentTrackingSuccess ) {
+			ve.track('wikia', { action: 'impression', label: 'preload-experiment', value: 'available-direct' });
+		} else if ( isUserInExperiment() && isUserInControlGroup() ) {
+			ve.track('wikia', { action: 'impression', label: 'preload-experiment', value: 'unavailable-direct' });
+		}
+		// FANDOM - UGC-3932 experiment end
 
 		updateTabs( true, mode, section === 'new' );
 
@@ -946,13 +955,6 @@ var isExperimentTrackingSuccess = false;
 				$caSource = $( '#ca-viewsource' );
 				$caEdit = $( '#ca-edit, #page-actions-edit' );
 				$caVeEdit = $( '#ca-ve-edit' );
-				if (window.location.search.includes('action')) {
-					ve.track('ve.preload-experiment', { status: 'available-direct' });
-				}
-			} else if ( isUserInControlGroup() ) {
-				if (window.location.search.includes('action')) {
-					ve.track('ve.preload-experiment', { status: 'unavailable-direct' });
-				}
 			}
 			// FANDOM - UGC-3932 experiment end
 
@@ -1200,10 +1202,12 @@ var isExperimentTrackingSuccess = false;
 				return;
 			}
 
+			// FANDOM - UGC-3932 experiment start
 			if ( isUserInExperiment() && !isUserInControlGroup() && !isExperimentTrackingSuccess ) {
-				ve.track('ve.preload-experiment', { status: 'success' });
 				isExperimentTrackingSuccess = true;
+				ve.track('wikia', { action: 'impression', label: 'preload-experiment', value: 'success' });
 			}
+			// FANDOM - UGC-3932 experiment end
 
 			var section = $( e.target ).closest( '#ca-addsection' ).length ? 'new' : null;
 
