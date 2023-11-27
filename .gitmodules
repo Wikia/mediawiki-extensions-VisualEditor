@@ -1,4 +1,4 @@
 [submodule "lib/ve"]
 	path = lib/ve
-	branch = REL1_39
+	branch = UGC-4682
 	url = https://github.com/Wikia/VisualEditor.git
