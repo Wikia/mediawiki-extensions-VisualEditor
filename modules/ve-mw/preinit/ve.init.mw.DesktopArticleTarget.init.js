@@ -1027,6 +1027,25 @@ var isExperimentTrackingSuccess = false;
 				if ( isUserInExperiment() && !isUserInControlGroup() ) {
 					$('.mw-editsection').off( '.ve-target' ).on( 'click.ve-target', init.onEditTabClick.bind( init, 'visual' ) );
 					$('.page-side-edit').off( '.ve-target' ).on( 'click.ve-target', init.onEditTabClick.bind( init, 'visual' ) );
+
+					const wrapperNode = document.querySelector('.highlight__actions');
+					const config = { childList: true, subtree: true };
+
+					const mutationObserver = new MutationObserver((mutationsList, observer) => {
+						mutationsList.forEach((mutation) => {
+							if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+								const addedNode = mutation.addedNodes[0];
+								if (addedNode && addedNode.querySelector('[data-testid="highlight-action_edit-section"]')) {
+									this.preloadModules();
+									const editButton = addedNode.querySelector('[data-testid="highlight-action_edit-section"]');
+									editButton.addEventListener('click', init.onEditTabClick.bind(init, 'visual'));
+								}
+							}
+						});
+					});
+
+					mutationObserver.observe(wrapperNode, config);
+
 					// Preload VisualEditor scripts
 					$caEdit.on('mouseover.ve-target-source', this.preloadModules.bind(this));
 					$caVeEdit.on('mouseover.ve-target', this.preloadModules.bind(this));
