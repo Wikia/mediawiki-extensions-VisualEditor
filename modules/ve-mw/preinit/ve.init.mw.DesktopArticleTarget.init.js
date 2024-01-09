@@ -43,6 +43,7 @@ var isExperimentTrackingSuccess = false;
 		plugins = [],
 		welcomeDialogDisabled = false,
 		educationPopupsDisabled = false,
+		mutationObserver,
 		$targetContainer = $(
 			document.querySelector( '[data-mw-ve-target-container]' ) ||
 			document.getElementById( 'content' )
@@ -1029,9 +1030,9 @@ var isExperimentTrackingSuccess = false;
 					$('.page-side-edit').off( '.ve-target' ).on( 'click.ve-target', init.onEditTabClick.bind( init, 'visual' ) );
 
 					const wrapperNode = document.querySelector('.highlight__actions');
-					const config = { childList: true, subtree: true };
+					const config = { childList: true };
 
-					const mutationObserver = new MutationObserver((mutationsList, observer) => {
+					mutationObserver = new MutationObserver((mutationsList, observer) => {
 						mutationsList.forEach((mutation) => {
 							if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
 								const addedNode = mutation.addedNodes[0];
@@ -1060,7 +1061,6 @@ var isExperimentTrackingSuccess = false;
 				// FANDOM - UGC-3932 experiment start
 				if ( isUserInExperiment() && !isUserInControlGroup() ) {
 					$('.mw-editsection').off( '.ve-target' ).on( 'click.ve-target', init.onEditTabClick.bind( init, 'source' ) );
-					$('.page-side-edit').off( '.ve-target' ).on( 'click.ve-target', init.onEditTabClick.bind( init, 'source' ) );
 				}
 				// FANDOM - UGC-3932 experiment end
 			}
@@ -1774,6 +1774,12 @@ var isExperimentTrackingSuccess = false;
 					} );
 
 				init.stopShowingWelcomeDialog();
+
+				// FANDOM - UGC-3932 Experiment - start
+				if ( isUserInExperiment() && !isUserInControlGroup() ) {
+					mutationObserver.detach();
+				}
+				// FANDOM - UGC-3932 Experiment - end
 			} );
 		}
 
