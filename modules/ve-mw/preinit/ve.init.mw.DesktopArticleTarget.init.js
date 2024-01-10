@@ -1026,8 +1026,14 @@ var isExperimentTrackingSuccess = false;
 				$caVeEdit.off( '.ve-target' ).on( 'click.ve-target', init.onEditTabClick.bind( init, 'visual' ) );
 				// FANDOM - UGC-3932 experiment start
 				if ( isUserInExperiment() && !isUserInControlGroup() ) {
-					$('.mw-editsection').off( '.ve-target' ).on( 'click.ve-target', init.onEditTabClick.bind( init, 'visual' ) );
-					$('.page-side-edit').off( '.ve-target' ).on( 'click.ve-target', init.onEditTabClick.bind( init, 'visual' ) );
+					const pageSideEdit = $('.page-side-edit');
+					if (pageSideEdit[0].href.includes('veaction')) {
+						$('.mw-editsection').off( '.ve-target' ).on( 'click.ve-target', init.onEditTabClick.bind( init, 'visual' ) );
+						$('.page-side-edit').off( '.ve-target' ).on( 'click.ve-target', init.onEditTabClick.bind( init, 'visual' ) );
+					} else {
+						$('.mw-editsection').off( '.ve-target' ).on( 'click.ve-target', init.onEditTabClick.bind( init, 'source' ) );
+						$('.page-side-edit').off( '.ve-target' ).on( 'click.ve-target', init.onEditTabClick.bind( init, 'source' ) );
+					}
 
 					const wrapperNode = document.querySelector('.highlight__actions');
 					const config = { childList: true };
@@ -1039,13 +1045,19 @@ var isExperimentTrackingSuccess = false;
 								if (addedNode && addedNode.querySelector('[data-testid="highlight-action_edit-section"]')) {
 									this.preloadModules();
 									const editButton = addedNode.querySelector('[data-testid="highlight-action_edit-section"]');
-									editButton.addEventListener('click', init.onEditTabClick.bind(init, 'visual'));
+									if (pageSideEdit[0].href.includes('veaction')) {
+										editButton.addEventListener('click', init.onEditTabClick.bind(init, 'visual'));
+									} else {
+										editButton.addEventListener('click', init.onEditTabClick.bind(init, 'source'));
+									}
 								}
 							}
 						});
 					});
 
-					mutationObserver.observe(wrapperNode, config);
+					if (wrapperNode) {
+						mutationObserver.observe(wrapperNode, config);
+					}
 
 					// Preload VisualEditor scripts
 					$caEdit.on('mouseover.ve-target-source', this.preloadModules.bind(this));
@@ -1058,11 +1070,6 @@ var isExperimentTrackingSuccess = false;
 			if ( pageCanLoadEditor ) {
 				// Always bind "Edit source" tab, because we want to handle switching with changes
 				$caEdit.off( '.ve-target' ).on( 'click.ve-target', init.onEditTabClick.bind( init, 'source' ) );
-				// FANDOM - UGC-3932 experiment start
-				if ( isUserInExperiment() && !isUserInControlGroup() ) {
-					$('.mw-editsection').off( '.ve-target' ).on( 'click.ve-target', init.onEditTabClick.bind( init, 'source' ) );
-				}
-				// FANDOM - UGC-3932 experiment end
 			}
 			if ( pageCanLoadEditor && init.isWikitextAvailable ) {
 				// Only bind "Add topic" tab if NWE is available, because VE doesn't support section
@@ -1776,7 +1783,7 @@ var isExperimentTrackingSuccess = false;
 				init.stopShowingWelcomeDialog();
 
 				// FANDOM - UGC-3932 Experiment - start
-				if ( isUserInExperiment() && !isUserInControlGroup() ) {
+				if ( isUserInExperiment() && !isUserInControlGroup() && mutationObserver ) {
 					mutationObserver.detach();
 				}
 				// FANDOM - UGC-3932 Experiment - end
