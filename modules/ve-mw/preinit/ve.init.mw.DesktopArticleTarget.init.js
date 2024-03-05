@@ -13,10 +13,6 @@
 // TODO: ve.now and ve.track should be moved to mw.libs.ve
 /* global ve */
 
-// FANDOM - UGC-3932 Experiment - start
-var isExperimentTrackingSuccess = false;
-// FANDOM - UGC-3932 Experiment - end
-
 /**
  * Platform preparation for the MediaWiki view page. This loads (when user needs it) the
  * actual MediaWiki integration and VisualEditor library.
@@ -49,22 +45,6 @@ var isExperimentTrackingSuccess = false;
 			document.getElementById( 'content' )
 		);
 
-	// FANDOM - UGC-3932 Experiment - start
-	function isUserInExperiment() {
-		var cookieValue = getCookie('experiment-ve-loading');
-		return cookieValue === 'normal' || cookieValue === 'faster';
-	}
-	function isUserInControlGroup() {
-		var cookieValue = getCookie('experiment-ve-loading');
-		return cookieValue === 'normal';
-	}
-	function getCookie(name) {
-		const value = `; ${document.cookie}`;
-		const parts = value.split(`; ${name}=`);
-		if (parts.length === 2) return parts.pop().split(';').shift();
-	}
-	// FANDOM - UGC-3932 Experiment - end
-
 	function showLoading( /* mode */ ) {
 		if ( isLoading ) {
 			return;
@@ -96,7 +76,6 @@ var isExperimentTrackingSuccess = false;
 		if ( init.$loading ) {
 			init.$loading.detach();
 		}
-
 		if ( tempWikitextEditor ) {
 			teardownTempWikitextEditor();
 		}
@@ -534,14 +513,6 @@ var isExperimentTrackingSuccess = false;
 	function activateTarget( mode, section, tPromise, modified ) {
 		var dataPromise;
 
-		// FANDOM - UGC-3932 experiment start
-		if ( isUserInExperiment() && !isUserInControlGroup() && !isExperimentTrackingSuccess ) {
-			ve.track('wikia', { action: 'impression', label: 'preload-experiment', value: 'available-direct' });
-		} else if ( isUserInExperiment() && isUserInControlGroup() ) {
-			ve.track('wikia', { action: 'impression', label: 'preload-experiment', value: 'unavailable-direct' });
-		}
-		// FANDOM - UGC-3932 experiment end
-
 		updateTabs( true, mode, section === 'new' );
 
 		// Only call requestPageData early if the target object isn't there yet.
@@ -941,23 +912,17 @@ var isExperimentTrackingSuccess = false;
 				pTabsId = isMinerva ? 'page-actions' :
 					$( '#p-views' ).length ? 'p-views' : 'p-cactions',
 				// Minerva puts the '#ca-...' ids on <a> nodes
-				$caSource = $( 'li#ca-viewsource' ),
-				$caEdit = $( 'li#ca-edit, li#page-actions-edit' ),
-				$caVeEdit = $( 'li#ca-ve-edit' ),
+				// FANDOM change
+				$caSource = $( '#ca-viewsource' );
+				$caEdit = $( '#ca-edit, #page-actions-edit' );
+				$caVeEdit = $( '#ca-ve-edit' );
+				// FANDOM change
 				$caEditLink = $caEdit.find( 'a' ),
 				$caVeEditLink = $caVeEdit.find( 'a' ),
 				caVeEditNextnode =
 					( conf.tabPosition === 'before' ) ?
 						$caEdit.get( 0 ) :
 						$caEdit.next().get( 0 );
-
-			// FANDOM - UGC-3932 experiment start
-			if ( isUserInExperiment() && !isUserInControlGroup() ) {
-				$caSource = $( '#ca-viewsource' );
-				$caEdit = $( '#ca-edit, #page-actions-edit' );
-				$caVeEdit = $( '#ca-ve-edit' );
-			}
-			// FANDOM - UGC-3932 experiment end
 
 			if ( !$caVeEdit.length ) {
 				// The below duplicates the functionality of VisualEditorHooks::onSkinTemplateNavigation()
@@ -1024,48 +989,46 @@ var isExperimentTrackingSuccess = false;
 			} else if ( pageCanLoadEditor ) {
 				// Allow instant switching to edit mode, without refresh
 				$caVeEdit.off( '.ve-target' ).on( 'click.ve-target', init.onEditTabClick.bind( init, 'visual' ) );
-				// FANDOM - UGC-3932 experiment start
-				if ( isUserInExperiment() && !isUserInControlGroup() ) {
-					const pageSideEdit = $('.page-side-edit');
-					if (pageSideEdit[0].href.includes('veaction')) {
-						$('.mw-editsection').off( '.ve-target' ).on( 'click.ve-target', init.onEditTabClick.bind( init, 'visual' ) );
-						$('.page-side-edit').off( '.ve-target' ).on( 'click.ve-target', init.onEditTabClick.bind( init, 'visual' ) );
-					} else {
-						$('.mw-editsection').off( '.ve-target' ).on( 'click.ve-target', init.onEditTabClick.bind( init, 'source' ) );
-						$('.page-side-edit').off( '.ve-target' ).on( 'click.ve-target', init.onEditTabClick.bind( init, 'source' ) );
-					}
+				// FANDOM change
+				const pageSideEdit = $('.page-side-edit');
+				if (pageSideEdit[0].href.includes('veaction')) {
+					$('.mw-editsection').off( '.ve-target' ).on( 'click.ve-target', init.onEditTabClick.bind( init, 'visual' ) );
+					$('.page-side-edit').off( '.ve-target' ).on( 'click.ve-target', init.onEditTabClick.bind( init, 'visual' ) );
+				} else {
+					$('.mw-editsection').off( '.ve-target' ).on( 'click.ve-target', init.onEditTabClick.bind( init, 'source' ) );
+					$('.page-side-edit').off( '.ve-target' ).on( 'click.ve-target', init.onEditTabClick.bind( init, 'source' ) );
+				}
 
-					const wrapperNode = document.querySelector('.highlight__actions');
-					const config = { childList: true };
+				const wrapperNode = document.querySelector('.highlight__actions');
+				const config = { childList: true };
 
-					mutationObserver = new MutationObserver((mutationsList, observer) => {
-						mutationsList.forEach((mutation) => {
-							if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-								const addedNode = mutation.addedNodes[0];
-								if (addedNode && addedNode.querySelector('[data-testid="highlight-action_edit-section"]')) {
-									this.preloadModules();
-									const editButton = addedNode.querySelector('[data-testid="highlight-action_edit-section"]');
-									if (pageSideEdit[0].href.includes('veaction')) {
-										editButton.addEventListener('click', init.onEditTabClick.bind(init, 'visual'));
-									} else {
-										editButton.addEventListener('click', init.onEditTabClick.bind(init, 'source'));
-									}
+				mutationObserver = new MutationObserver((mutationsList, observer) => {
+					mutationsList.forEach((mutation) => {
+						if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+							const addedNode = mutation.addedNodes[0];
+							if (addedNode && addedNode.querySelector('[data-testid="highlight-action_edit-section"]')) {
+								this.preloadModules();
+								const editButton = addedNode.querySelector('[data-testid="highlight-action_edit-section"]');
+								if (pageSideEdit[0].href.includes('veaction')) {
+									editButton.addEventListener('click', init.onEditTabClick.bind(init, 'visual'));
+								} else {
+									editButton.addEventListener('click', init.onEditTabClick.bind(init, 'source'));
 								}
 							}
-						});
+						}
 					});
+				});
 
-					if (wrapperNode) {
-						mutationObserver.observe(wrapperNode, config);
-					}
-
-					// Preload VisualEditor scripts
-					$caEdit.on('mouseover.ve-target-source', this.preloadModules.bind(this));
-					$caVeEdit.on('mouseover.ve-target', this.preloadModules.bind(this));
-					$('.mw-editsection').on('mouseover.ve-target-section', this.preloadModules.bind(this));
-					$('.page-side-edit').on('mouseover.ve-target-float', this.preloadModules.bind(this));
+				if (wrapperNode) {
+					mutationObserver.observe(wrapperNode, config);
 				}
-				// FANDOM - UGC-3932 experiment end
+
+				// Preload VisualEditor scripts
+				$caEdit.on('mouseover.ve-target-source', this.preloadModules.bind(this));
+				$caVeEdit.on('mouseover.ve-target', this.preloadModules.bind(this));
+				$('.mw-editsection').on('mouseover.ve-target-section', this.preloadModules.bind(this));
+				$('.page-side-edit').on('mouseover.ve-target-float', this.preloadModules.bind(this));
+				// FANDOM change
 			}
 			if ( pageCanLoadEditor ) {
 				// Always bind "Edit source" tab, because we want to handle switching with changes
@@ -1100,11 +1063,11 @@ var isExperimentTrackingSuccess = false;
 			}
 		},
 
-		// FANDOM - UGC-3932 experiment start
+		// FANDOM change
 		preloadModules: function () {
 			mw.loader.using(['ext.visualEditor.switching', 'ext.visualEditor.articleTarget', 'ext.visualEditor.core.desktop']);
 		},
-		// FANDOM - UGC-3932 experiment end
+		// FANDOM change
 
 		setupMultiSectionLinks: function () {
 			var $editsections = $( '#mw-content-text .mw-editsection' ),
@@ -1227,13 +1190,6 @@ var isExperimentTrackingSuccess = false;
 			if ( isLoading ) {
 				return;
 			}
-
-			// FANDOM - UGC-3932 experiment start
-			if ( isUserInExperiment() && !isUserInControlGroup() && !isExperimentTrackingSuccess ) {
-				isExperimentTrackingSuccess = true;
-				ve.track('wikia', { action: 'impression', label: 'preload-experiment', value: 'success' });
-			}
-			// FANDOM - UGC-3932 experiment end
 
 			var section = $( e.target ).closest( '#ca-addsection' ).length ? 'new' : null;
 
@@ -1782,11 +1738,11 @@ var isExperimentTrackingSuccess = false;
 
 				init.stopShowingWelcomeDialog();
 
-				// FANDOM - UGC-3932 Experiment - start
-				if ( isUserInExperiment() && !isUserInControlGroup() && mutationObserver ) {
+				// FANDOM change
+				if ( mutationObserver ) {
 					mutationObserver.detach();
 				}
-				// FANDOM - UGC-3932 Experiment - end
+				// FANDOM change
 			} );
 		}
 
