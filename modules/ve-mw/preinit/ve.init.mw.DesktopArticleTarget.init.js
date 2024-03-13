@@ -992,12 +992,11 @@
 				// FANDOM change
 				const pageSideEdit = $('.page-side-edit');
 				if (pageSideEdit[0].href.includes('veaction')) {
-					$('.mw-editsection').off( '.ve-target' ).on( 'click.ve-target', init.onEditTabClick.bind( init, 'visual' ) );
 					$('.page-side-edit').off( '.ve-target' ).on( 'click.ve-target', init.onEditTabClick.bind( init, 'visual' ) );
 				} else {
-					$('.mw-editsection').off( '.ve-target' ).on( 'click.ve-target', init.onEditTabClick.bind( init, 'source' ) );
 					$('.page-side-edit').off( '.ve-target' ).on( 'click.ve-target', init.onEditTabClick.bind( init, 'source' ) );
 				}
+				$('.mw-editsection a:not(.mw-editsection-visualeditor)').off( '.ve-target' ).on( 'click.ve-target', init.onEditSectionLinkClick.bind( init, 'source' ) );
 
 				const wrapperNode = document.querySelector('.highlight__actions');
 				const config = { childList: true };
@@ -1151,7 +1150,7 @@
 				// init without refresh as that'd initialise for the wrong rev id (T52925)
 				// and would preserve the wrong DOM with a diff on top.
 				$editsections.find( '.mw-editsection-visualeditor' )
-					.off( '.ve-target' ).on( 'click.ve-target', init.onEditSectionLinkClick.bind( init, 'visual' ) );
+					.off( '.ve-target' ).on( 'click.ve-target', init.onEditSectionLinkClick.bind( init, 'source' ) );
 				if ( init.isWikitextAvailable ) {
 					// TOOD: Make this less fragile
 					$editsections.find( 'a:not( .mw-editsection-visualeditor )' )
@@ -1283,7 +1282,7 @@
 		 * @param {string} [section] Override edit section, taken from link URL if not specified
 		 */
 		onEditSectionLinkClick: function ( mode, e, section ) {
-			var linkUri = new mw.Uri( e.target.href ),
+			var linkUri = new mw.Uri( e.currentTarget.href ),
 				title = mw.Title.newFromText( linkUri.query.title || '' );
 
 			if (
