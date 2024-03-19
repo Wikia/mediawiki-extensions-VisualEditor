@@ -1150,7 +1150,7 @@
 				// init without refresh as that'd initialise for the wrong rev id (T52925)
 				// and would preserve the wrong DOM with a diff on top.
 				$editsections.find( '.mw-editsection-visualeditor' )
-					.off( '.ve-target' ).on( 'click.ve-target', init.onEditSectionLinkClick.bind( init, 'source' ) );
+					.off( '.ve-target' ).on( 'click.ve-target', init.onEditSectionLinkClick.bind( init, 'visual' ) );
 				if ( init.isWikitextAvailable ) {
 					// TOOD: Make this less fragile
 					$editsections.find( 'a:not( .mw-editsection-visualeditor )' )
@@ -1289,7 +1289,7 @@
 				// Modified click (e.g. ctrl+click)
 				!init.isUnmodifiedLeftClick( e ) ||
 				// Not an edit action
-				!( 'action' in linkUri.query || 'veaction' in linkUri.query ) ||
+				!( 'veaction' in linkUri.query ) ||
 				// Edit target is on another host (e.g. commons file)
 				linkUri.getHostPort() !== location.host ||
 				// Title param doesn't match current page
