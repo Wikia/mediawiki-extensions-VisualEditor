@@ -922,7 +922,8 @@
 				caVeEditNextnode =
 					( conf.tabPosition === 'before' ) ?
 						$caEdit.get( 0 ) :
-						$caEdit.next().get( 0 );
+						$caEdit.next().get( 0 ),
+				userCanEditOrViewSource = ($caEdit.length || $caSource.length);
 
 			if ( !$caVeEdit.length ) {
 				// The below duplicates the functionality of VisualEditorHooks::onSkinTemplateNavigation()
@@ -986,15 +987,19 @@
 			// If the edit tab is hidden, remove it.
 			if ( !( init.isVisualAvailable ) ) {
 				$caVeEdit.remove();
-			} else if ( pageCanLoadEditor ) {
+			} else if ( pageCanLoadEditor && userCanEditOrViewSource ) {
 				// Allow instant switching to edit mode, without refresh
 				$caVeEdit.off( '.ve-target' ).on( 'click.ve-target', init.onEditTabClick.bind( init, 'visual' ) );
 				// FANDOM change
 				const pageSideEdit = $('.page-side-edit');
-				if (pageSideEdit[0].href.includes('veaction')) {
-					$('.page-side-edit').off( '.ve-target' ).on( 'click.ve-target', init.onEditTabClick.bind( init, 'visual' ) );
-				} else {
-					$('.page-side-edit').off( '.ve-target' ).on( 'click.ve-target', init.onEditTabClick.bind( init, 'source' ) );
+				// There are cases when "edit" button is not rendered via PHP template since "edit" action is not present
+				// Which means that user doesn't have permissions to create / edit / view source of the page
+				if (pageSideEdit.length) {
+					if (pageSideEdit[0].href.includes('veaction')) {
+						$('.page-side-edit').off( '.ve-target' ).on( 'click.ve-target', init.onEditTabClick.bind( init, 'visual' ) );
+					} else {
+						$('.page-side-edit').off( '.ve-target' ).on( 'click.ve-target', init.onEditTabClick.bind( init, 'source' ) );
+					}
 				}
 				$('.mw-editsection a:not(.mw-editsection-visualeditor)').off( '.ve-target' ).on( 'click.ve-target', init.onEditSectionLinkClick.bind( init, 'source' ) );
 
@@ -1029,11 +1034,11 @@
 				$('.page-side-edit').on('mouseover.ve-target-float', this.preloadModules.bind(this));
 				// FANDOM change
 			}
-			if ( pageCanLoadEditor ) {
+			if ( pageCanLoadEditor && userCanEditOrViewSource ) {
 				// Always bind "Edit source" tab, because we want to handle switching with changes
 				$caEdit.off( '.ve-target' ).on( 'click.ve-target', init.onEditTabClick.bind( init, 'source' ) );
 			}
-			if ( pageCanLoadEditor && init.isWikitextAvailable ) {
+			if ( pageCanLoadEditor && init.isWikitextAvailable && userCanEditOrViewSource ) {
 				// Only bind "Add topic" tab if NWE is available, because VE doesn't support section
 				// so we never have to switch from it when editing a section
 				$( '#ca-addsection' ).off( '.ve-target' ).on( 'click.ve-target', init.onEditTabClick.bind( init, 'source' ) );
