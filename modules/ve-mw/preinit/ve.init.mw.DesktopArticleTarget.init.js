@@ -922,8 +922,7 @@
 				caVeEditNextnode =
 					( conf.tabPosition === 'before' ) ?
 						$caEdit.get( 0 ) :
-						$caEdit.next().get( 0 ),
-				userCanEditOrViewSource = ($caEdit.length || $caSource.length);
+						$caEdit.next().get( 0 );
 
 			if ( !$caVeEdit.length ) {
 				// The below duplicates the functionality of VisualEditorHooks::onSkinTemplateNavigation()
@@ -987,7 +986,7 @@
 			// If the edit tab is hidden, remove it.
 			if ( !( init.isVisualAvailable ) ) {
 				$caVeEdit.remove();
-			} else if ( pageCanLoadEditor && userCanEditOrViewSource ) {
+			} else if ( pageCanLoadEditor ) {
 				// Allow instant switching to edit mode, without refresh
 				$caVeEdit.off( '.ve-target' ).on( 'click.ve-target', init.onEditTabClick.bind( init, 'visual' ) );
 				// FANDOM change
@@ -1036,11 +1035,11 @@
 				$('.page-side-edit').on('mouseover.ve-target-float', this.preloadModules.bind(this));
 				// FANDOM change
 			}
-			if ( pageCanLoadEditor && userCanEditOrViewSource ) {
+			if ( pageCanLoadEditor ) {
 				// Always bind "Edit source" tab, because we want to handle switching with changes
 				$caEdit.off( '.ve-target' ).on( 'click.ve-target', init.onEditTabClick.bind( init, 'source' ) );
 			}
-			if ( pageCanLoadEditor && init.isWikitextAvailable && userCanEditOrViewSource ) {
+			if ( pageCanLoadEditor && init.isWikitextAvailable ) {
 				// Only bind "Add topic" tab if NWE is available, because VE doesn't support section
 				// so we never have to switch from it when editing a section
 				$( '#ca-addsection' ).off( '.ve-target' ).on( 'click.ve-target', init.onEditTabClick.bind( init, 'source' ) );
