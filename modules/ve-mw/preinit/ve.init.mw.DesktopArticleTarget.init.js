@@ -991,10 +991,14 @@
 				$caVeEdit.off( '.ve-target' ).on( 'click.ve-target', init.onEditTabClick.bind( init, 'visual' ) );
 				// FANDOM change
 				const pageSideEdit = $('.page-side-edit');
-				if (pageSideEdit[0].href.includes('veaction')) {
-					$('.page-side-edit').off( '.ve-target' ).on( 'click.ve-target', init.onEditTabClick.bind( init, 'visual' ) );
-				} else {
-					$('.page-side-edit').off( '.ve-target' ).on( 'click.ve-target', init.onEditTabClick.bind( init, 'source' ) );
+				// There are cases when "edit" button is not rendered via PHP template since "edit" action is not present
+				// Which means that user doesn't have permissions to create / edit / view source of the page
+				if (pageSideEdit.length) {
+					if (pageSideEdit[0].href.includes('veaction')) {
+						$('.page-side-edit').off( '.ve-target' ).on( 'click.ve-target', init.onEditTabClick.bind( init, 'visual' ) );
+					} else {
+						$('.page-side-edit').off( '.ve-target' ).on( 'click.ve-target', init.onEditTabClick.bind( init, 'source' ) );
+					}
 				}
 				$('.mw-editsection a:not(.mw-editsection-visualeditor)').off( '.ve-target' ).on( 'click.ve-target', init.onEditSectionLinkClick.bind( init, 'source' ) );
 
@@ -1008,10 +1012,12 @@
 							if (addedNode && addedNode.querySelector('[data-testid="highlight-action_edit-section"]')) {
 								this.preloadModules();
 								const editButton = addedNode.querySelector('[data-testid="highlight-action_edit-section"]');
-								if (pageSideEdit[0].href.includes('veaction')) {
-									editButton.addEventListener('click', init.onEditTabClick.bind(init, 'visual'));
-								} else {
-									editButton.addEventListener('click', init.onEditTabClick.bind(init, 'source'));
+								if (pageSideEdit.length) {
+									if (pageSideEdit[0].href.includes('veaction')) {
+										editButton.addEventListener('click', init.onEditTabClick.bind(init, 'visual'));
+									} else {
+										editButton.addEventListener('click', init.onEditTabClick.bind(init, 'source'));
+									}
 								}
 							}
 						}
