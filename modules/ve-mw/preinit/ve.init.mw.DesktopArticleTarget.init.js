@@ -1070,7 +1070,7 @@
 
 		// FANDOM change
 		preloadModules: function () {
-			//mw.loader.using(['ext.visualEditor.switching', 'ext.visualEditor.targetLoader', 'ext.visualEditor.articleTarget', 'ext.visualEditor.core.desktop']);
+			mw.loader.using(['ext.visualEditor.switching', 'ext.visualEditor.targetLoader', 'ext.visualEditor.articleTarget', 'ext.visualEditor.core.desktop']);
 		},
 		// FANDOM change
 
