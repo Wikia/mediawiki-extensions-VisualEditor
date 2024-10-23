@@ -18,7 +18,7 @@ use EditPage;
 use ExtensionRegistry;
 use Html;
 use Language;
-use MediaWiki;
+use MediaWiki\MediaWikiEntryPoint;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\ResourceLoader\ResourceLoader;
 use MediaWiki\User\UserIdentity;
@@ -1187,11 +1187,11 @@ class Hooks {
 	 * @param OutputPage $output The page view.
 	 * @param User $user The user-specific settings.
 	 * @param WebRequest $request
-	 * @param MediaWiki $mediaWiki Helper class.
+	 * @param MediaWikiEntryPoint $mediaWikiEntryPoint Helper class.
 	 */
 	public static function onBeforeInitialize(
 		Title $title, $article, OutputPage $output,
-		User $user, WebRequest $request, MediaWiki $mediaWiki
+		User $user, WebRequest $request, MediaWikiEntryPoint $mediaWikiEntryPoint
 	) {
 		if ( $request->getVal( 'veaction' ) ) {
 			$request->setVal( 'redirect', 'no' );
