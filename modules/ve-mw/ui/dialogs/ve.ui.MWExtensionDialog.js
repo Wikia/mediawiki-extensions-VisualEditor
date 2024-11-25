@@ -1,7 +1,7 @@
 /*!
  * VisualEditor UserInterface MWExtensionDialog class.
  *
- * @copyright 2011-2020 VisualEditor Team and others; see AUTHORS.txt
+ * @copyright See AUTHORS.txt
  * @license The MIT License (MIT); see LICENSE.txt
  */
 
@@ -11,7 +11,7 @@
  * @class
  * @abstract
  * @extends ve.ui.NodeDialog
- * @mixins ve.ui.MWExtensionWindow
+ * @mixes ve.ui.MWExtensionWindow
  *
  * @constructor
  * @param {Object} [config] Configuration options
@@ -50,10 +50,9 @@ ve.ui.MWExtensionDialog.prototype.initialize = function () {
  * @inheritdoc
  */
 ve.ui.MWExtensionDialog.prototype.getSetupProcess = function ( data ) {
-	var process;
 	data = data || {};
 	// Parent process
-	process = ve.ui.MWExtensionDialog.super.prototype.getSetupProcess.call( this, data );
+	const process = ve.ui.MWExtensionDialog.super.prototype.getSetupProcess.call( this, data );
 	// Mixin process
 	return ve.ui.MWExtensionWindow.prototype.getSetupProcess.call( this, data, process );
 };
@@ -62,10 +61,9 @@ ve.ui.MWExtensionDialog.prototype.getSetupProcess = function ( data ) {
  * @inheritdoc
  */
 ve.ui.MWExtensionDialog.prototype.getReadyProcess = function ( data ) {
-	var process;
 	data = data || {};
 	// Parent process
-	process = ve.ui.MWExtensionDialog.super.prototype.getReadyProcess.call( this, data );
+	const process = ve.ui.MWExtensionDialog.super.prototype.getReadyProcess.call( this, data );
 	// Mixin process
 	return ve.ui.MWExtensionWindow.prototype.getReadyProcess.call( this, data, process );
 };
@@ -74,10 +72,9 @@ ve.ui.MWExtensionDialog.prototype.getReadyProcess = function ( data ) {
  * @inheritdoc
  */
 ve.ui.MWExtensionDialog.prototype.getTeardownProcess = function ( data ) {
-	var process;
 	data = data || {};
 	// Parent process
-	process = ve.ui.MWExtensionDialog.super.prototype.getTeardownProcess.call( this, data );
+	const process = ve.ui.MWExtensionDialog.super.prototype.getTeardownProcess.call( this, data );
 	// Mixin process
 	return ve.ui.MWExtensionWindow.prototype.getTeardownProcess.call( this, data, process );
 };
@@ -86,12 +83,54 @@ ve.ui.MWExtensionDialog.prototype.getTeardownProcess = function ( data ) {
  * @inheritdoc
  */
 ve.ui.MWExtensionDialog.prototype.getActionProcess = function ( action ) {
+	if ( action === '' ) {
+		if ( this.hasMeaningfulEdits() ) {
+			// eslint-disable-next-line arrow-body-style
+			return new OO.ui.Process( () => {
+				return this.confirmAbandon().then( ( confirm ) => {
+					if ( confirm ) {
+						/* We may need to rethink this if something in the
+						   dependency chain adds to the current behaviour */
+						this.close();
+					}
+				} );
+			} );
+		}
+	}
+
 	// Parent process
-	var process = ve.ui.MWExtensionDialog.super.prototype.getActionProcess.call( this, action );
+	const process = ve.ui.MWExtensionDialog.super.prototype.getActionProcess.call( this, action );
 	// Mixin process
-	return ve.ui.MWExtensionWindow.prototype.getActionProcess.call( this, action, process ).next( function () {
+	return ve.ui.MWExtensionWindow.prototype.getActionProcess.call( this, action, process ).next( () => {
 		if ( action === 'done' ) {
 			this.close( { action: 'done' } );
 		}
-	}, this );
+	} );
+};
+
+/**
+ * Show a confirmation prompt before closing the dialog.
+ * Displays a default prompt of `mw-widgets-abandonedit`.
+ *
+ * @param {jQuery|string|Function} [prompt] Prompt, defaults to visualeditor-dialog-extension-abandonedit
+ * @return {jQuery.Promise} Close promise
+ */
+ve.ui.MWExtensionDialog.prototype.confirmAbandon = function ( prompt ) {
+	if ( prompt === undefined ) {
+		prompt = ve.msg( 'visualeditor-dialog-extension-abandonedit' );
+	}
+	return OO.ui.confirm( prompt, {
+		actions: [
+			{
+				action: 'reject',
+				label: ve.msg( 'mw-widgets-abandonedit-keep' ),
+				flags: 'safe'
+			},
+			{
+				action: 'accept',
+				label: ve.msg( 'mw-widgets-abandonedit-discard' ),
+				flags: 'destructive'
+			}
+		]
+	} );
 };

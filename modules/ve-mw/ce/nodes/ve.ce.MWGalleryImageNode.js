@@ -1,7 +1,7 @@
 /*!
  * VisualEditor ContentEditable MWGalleryImageNode class.
  *
- * @copyright 2011-2020 VisualEditor Team and others; see AUTHORS.txt
+ * @copyright See AUTHORS.txt
  * @license The MIT License (MIT); see LICENSE.txt
  */
 
@@ -16,38 +16,35 @@
  * @param {Object} [config] Configuration options
  */
 ve.ce.MWGalleryImageNode = function VeCeMWGalleryImageNode( model ) {
-	var attributes, galleryMwAttrs, mode, imagePadding,
-		outerDivWidth, imageHeight, innerDivHeight, innerDivMargin, innerDivWidth,
-		$thumbDiv, $innerDiv, $a, $img, resourceTitle,
-		defaults = mw.config.get( 'wgVisualEditorConfig' ).galleryOptions;
-
 	// Parent constructor
 	ve.ce.MWGalleryImageNode.super.apply( this, arguments );
 
 	// DOM hierarchy for MWGalleryImageNode:
 	//   <li> this.$element (gallerybox)
 	//     <div> thumbDiv
-	//       <figure-inline> innerDiv
+	//       <span> innerDiv
 	//         <a> a
 	//           <img> img
 	//     <a> filenameA (galleryfilename)
 	//     <figcaption> ve.ce.MWGalleryImageCaptionNode
 
-	attributes = model.getAttributes();
-	galleryMwAttrs = model.parent.getAttributes().mw.attrs;
+	const defaults = mw.config.get( 'wgVisualEditorConfig' ).galleryOptions;
+	const attributes = model.getAttributes();
+	const galleryMwAttrs = model.parent.getAttribute( 'mw' ).attrs;
 
 	// Putting all this setup in the constructor works because MWGalleryImageNodes are never updated,
 	// only created from scratch
 
 	// These dimensions are different depending on the gallery mode.
 	// (This only vaguely approximates the actual rendering.)
-	mode = galleryMwAttrs.mode || defaults.mode;
+	const mode = galleryMwAttrs.mode || defaults.mode;
+	let innerDivWidth, innerDivHeight, innerDivMargin, outerDivWidth;
 	if ( mode === 'traditional' || mode === 'nolines' || mode === 'slideshow' ) {
-		imagePadding = ( mode === 'traditional' ? 30 : 0 );
+		const imagePadding = ( mode === 'traditional' ? 30 : 0 );
 		innerDivWidth = parseInt( galleryMwAttrs.widths || defaults.imageWidth ) + imagePadding;
 		innerDivHeight = parseInt( galleryMwAttrs.heights || defaults.imageHeight ) + imagePadding;
 		if ( mode === 'traditional' ) {
-			imageHeight = parseInt( attributes.height );
+			const imageHeight = parseInt( attributes.height );
 			innerDivMargin = ( ( innerDivHeight - imageHeight ) / 2 ) + 'px auto';
 		} else {
 			innerDivMargin = 0;
@@ -60,25 +57,34 @@ ve.ce.MWGalleryImageNode = function VeCeMWGalleryImageNode( model ) {
 		outerDivWidth = innerDivWidth + 4;
 	}
 
-	resourceTitle = mw.Title.newFromText( attributes.resource );
+	const resourceTitle = mw.Title.newFromText( mw.libs.ve.normalizeParsoidResourceName( attributes.resource ) );
 
 	this.$element
 		.addClass( 'gallerybox' )
 		.css( 'width', outerDivWidth + 'px' );
-	$thumbDiv = $( '<div>' )
+	const $thumbDiv = $( '<div>' )
 		.addClass( 'thumb' )
 		.css( 'width', innerDivWidth + 'px' )
 		.css( 'height', innerDivHeight + 'px' );
-	$innerDiv = $( '<figure-inline>' )
+	const $innerDiv = $( '<span>' )
 		.css( 'margin', innerDivMargin );
-	$a = $( '<a>' )
-		.addClass( 'image' );
-	$img = $( '<img>' )
-		.attr( 'resource', attributes.resource )
-		.attr( 'alt', attributes.altText )
-		.attr( 'src', attributes.src )
-		.attr( 'height', attributes.height )
-		.attr( 'width', attributes.width );
+	const $a = $( '<a>' ).addClass( 'mw-file-description' );
+
+	let $img;
+	if ( model.getAttribute( 'isError' ) ) {
+		$img = $( '<span>' )
+			.addClass( 'mw-file-element mw-broken-media' )
+			.text( model.getAttribute( 'errorText' ) );
+	} else {
+		$img = $( '<img>' )
+			.addClass( 'mw-file-element' )
+			.attr( 'resource', attributes.resource )
+			.attr( 'alt', attributes.altText )
+			.attr( 'src', attributes.src )
+			.attr( 'height', attributes.height )
+			.attr( 'width', attributes.width );
+	}
+
 	this.$filenameA = $( '<a>' )
 		.attr( 'href', '#' ) // Just to make it look like a link
 		.text( resourceTitle ? resourceTitle.getMainText() : attributes.resource )
@@ -123,7 +129,7 @@ ve.ce.MWGalleryImageNode.prototype.getDomPosition = function () {
 	// CE nodes (specifically, the image, this.$thumbDiv), which throws the calculations out of whack.
 	// Luckily, MWGalleryImageNode is very simple and can contain at most one other node: its caption,
 	// which is always inserted at the end.
-	var domNode = this.$element.last()[ 0 ];
+	const domNode = this.$element.last()[ 0 ];
 	return {
 		node: domNode,
 		offset: domNode.childNodes.length

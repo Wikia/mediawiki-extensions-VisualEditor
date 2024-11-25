@@ -4,9 +4,10 @@
  * @package VisualEditor
  */
 
-/* eslint-env node, es6 */
+'use strict';
+
 module.exports = function ( grunt ) {
-	var modules = grunt.file.readJSON( 'lib/ve/build/modules.json' ),
+	const conf = grunt.file.readJSON( 'extension.json' ),
 		screenshotOptions = {
 			reporter: 'spec',
 			// TODO: Work out how to catch this timeout and continue.
@@ -14,8 +15,7 @@ module.exports = function ( grunt ) {
 			timeout: 5 * 60 * 1000,
 			require: [
 				function () {
-					// eslint-disable-next-line no-undef, no-implicit-globals
-					langs = [ grunt.option( 'lang' ) || 'en' ];
+					global.langs = [ grunt.option( 'lang' ) || 'en' ];
 				}
 			]
 		},
@@ -26,14 +26,12 @@ module.exports = function ( grunt ) {
 			timeout: 5 * 60 * 1000,
 			require: [
 				function () {
-					// eslint-disable-next-line no-undef, no-implicit-globals
-					langs = require( './build/tasks/screenshotLangs.json' ).langs;
+					global.langs = require( './build/tasks/screenshotLangs.json' ).langs;
 				}
 			]
 		};
 
 	grunt.loadNpmTasks( 'grunt-banana-checker' );
-	grunt.loadNpmTasks( 'grunt-contrib-copy' );
 	grunt.loadNpmTasks( 'grunt-contrib-watch' );
 	grunt.loadNpmTasks( 'grunt-eslint' );
 	grunt.loadNpmTasks( 'grunt-image' );
@@ -44,38 +42,6 @@ module.exports = function ( grunt ) {
 	grunt.loadTasks( 'build/tasks' );
 
 	grunt.initConfig( {
-		jsduckcatconfig: {
-			main: {
-				target: '.jsduck/categories.json',
-				from: [
-					'.jsduck/mw-categories.json',
-					{
-						file: 'lib/ve/.jsduck/categories.json',
-						aggregate: {
-							'VisualEditor (core)': [
-								'General',
-								'Initialization',
-								'DataModel',
-								'ContentEditable',
-								'User Interface',
-								'Tests'
-							]
-						},
-						include: [ 'UnicodeJS', 'OOjs UI', 'Upstream' ]
-					}
-				]
-			}
-		},
-		buildloader: {
-			egiframe: {
-				targetFile: '.jsduck/eg-iframe.html',
-				template: '.jsduck/eg-iframe.html.template',
-				modules: modules,
-				load: [ 'visualEditor.desktop.standalone' ],
-				pathPrefix: 'lib/ve/',
-				indent: '\t\t'
-			}
-		},
 		mochaTest: {
 			'screenshots-en': {
 				options: screenshotOptions,
@@ -134,10 +100,12 @@ module.exports = function ( grunt ) {
 				typos: 'build/typos.json'
 			},
 			src: [
-				'**/*.{js,json,less,css,txt,php}',
+				'**/*.{js,json,less,css,txt,php,md,sh}',
 				'!package-lock.json',
 				'!build/typos.json',
-				'!i18n/**',
+				'!**/i18n/**/*.json',
+				'**/i18n/**/en.json',
+				'**/i18n/**/qqq.json',
 				'!lib/**',
 				'!{docs,node_modules,vendor}/**',
 				'!.git/**'
@@ -148,12 +116,12 @@ module.exports = function ( grunt ) {
 				cache: true,
 				fix: grunt.option( 'fix' )
 			},
-			all: [
-				'*.{js,json}',
-				'{build,modules}/**/*.{js,json}'
-			]
+			all: [ '.' ]
 		},
 		stylelint: {
+			options: {
+				reportNeedlessDisables: true
+			},
 			all: [
 				'**/*.{css,less}',
 				'!coverage/**',
@@ -164,18 +132,7 @@ module.exports = function ( grunt ) {
 				'!vendor/**'
 			]
 		},
-		banana: {
-			all: [
-				'i18n/{ve-mw,ve-mw/api,ve-wmf}'
-			]
-		},
-		copy: {
-			jsduck: {
-				src: 'lib/ve/**/*',
-				dest: 'docs/',
-				expand: true
-			}
-		},
+		banana: conf.MessagesDirs,
 		watch: {
 			files: [
 				'.{stylelintrc,eslintrc}.json',
@@ -187,15 +144,15 @@ module.exports = function ( grunt ) {
 	} );
 
 	grunt.registerTask( 'git-status', function () {
-		var done = this.async();
+		const done = this.async();
 		// Are there unstaged changes?
-		require( 'child_process' ).exec( 'git ls-files --modified', function ( err, stdout, stderr ) {
-			var ret = err || stderr || stdout;
+		require( 'child_process' ).exec( 'git ls-files --modified', ( err, stdout, stderr ) => {
+			const ret = err || stderr || stdout;
 			if ( ret ) {
 				grunt.log.error( 'Unstaged changes in these files:' );
 				grunt.log.error( ret );
 				// Show a condensed diff
-				require( 'child_process' ).exec( 'git diff -U1 | tail -n +3', function ( err2, stdout2, stderr2 ) {
+				require( 'child_process' ).exec( 'git diff -U1 | tail -n +3', ( err2, stdout2, stderr2 ) => {
 					grunt.log.write( err2 || stderr2 || stdout2 );
 					done( false );
 				} );
@@ -206,9 +163,7 @@ module.exports = function ( grunt ) {
 		} );
 	} );
 
-	grunt.registerTask( 'build', [ 'jsduckcatconfig', 'buildloader' ] );
-	grunt.registerTask( 'lint', [ 'tyops', 'eslint', 'stylelint', 'banana' ] );
-	grunt.registerTask( 'test', [ 'build', 'lint' ] );
+	grunt.registerTask( 'test', [ 'tyops', 'eslint', 'stylelint', 'banana' ] );
 	grunt.registerTask( 'test-ci', [ 'git-status' ] );
 	grunt.registerTask( 'screenshots', [ 'mochaTest:screenshots-en', 'image:pngs' ] );
 	grunt.registerTask( 'screenshots-all', [ 'mochaTest:screenshots-all', 'image:pngs' ] );

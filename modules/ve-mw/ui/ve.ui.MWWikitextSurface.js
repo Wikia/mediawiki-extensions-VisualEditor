@@ -1,7 +1,7 @@
 /*!
  * VisualEditor UserInterface MWWikitextSurface class.
  *
- * @copyright 2011-2020 VisualEditor Team and others; see http://ve.mit-license.org
+ * @copyright See AUTHORS.txt
  */
 
 /**
@@ -9,27 +9,27 @@
  * @extends ve.ui.Surface
  *
  * @constructor
+ * @param {ve.init.Target} target
  * @param {HTMLDocument|Array|ve.dm.LinearData|ve.dm.Document} dataOrDoc Document data to edit
  * @param {Object} [config] Configuration options
  */
 ve.ui.MWWikitextSurface = function VeUiMWWikitextSurface() {
-	var surface = this;
-
 	// Parent constructor
 	ve.ui.MWWikitextSurface.super.apply( this, arguments );
 
 	// Initialization
 	this.$element.addClass( 've-ui-mwWikitextSurface' );
-	// The following classes are used here:
-	// * mw-editfont-monospace
-	// * mw-editfont-sans-serif
-	// * mw-editfont-serif
-	this.getView().$element.addClass( 'mw-editfont-' + mw.user.options.get( 'editfont' ) );
-	// eslint-disable-next-line mediawiki/class-doc
-	this.$placeholder.addClass( 'mw-editfont-' + mw.user.options.get( 'editfont' ) );
+
+	this.getView().$element.add( this.$placeholder )
+		.removeClass( 've-ui-surface-source-font' )
+		// The following classes are used here:
+		// * mw-editfont-monospace
+		// * mw-editfont-sans-serif
+		// * mw-editfont-serif
+		.addClass( 'mw-editfont-' + mw.user.options.get( 'editfont' ) );
+
 	// eslint-disable-next-line no-jquery/no-global-selector
 	this.$textbox = $( '#wpTextbox1' );
-
 	if ( !this.$textbox.length ) {
 		this.$textbox = $( '<textarea>' )
 			.attr( 'id', 'wpTextbox1' )
@@ -47,6 +47,11 @@ ve.ui.MWWikitextSurface = function VeUiMWWikitextSurface() {
 		this.$textbox.textSelection( 'unregister' );
 	}
 
+	// Note: Chainable methods (setContents/setSelection) must use
+	// non-arrow functions that return this. We can't just return
+	// this.$textbox either as the collection could be cloned.
+	/* eslint es-x/no-arrow-functions: error */
+	const surface = this;
 	// Backwards support for the textSelection API
 	this.$textbox.textSelection( 'register', {
 		getContents: function () {
@@ -57,7 +62,7 @@ ve.ui.MWWikitextSurface = function VeUiMWWikitextSurface() {
 			return this;
 		},
 		getSelection: function () {
-			var range = surface.getModel().getSelection().getCoveringRange();
+			const range = surface.getModel().getSelection().getCoveringRange();
 			if ( !range ) {
 				return '';
 			}
@@ -70,12 +75,12 @@ ve.ui.MWWikitextSurface = function VeUiMWWikitextSurface() {
 			return this;
 		},
 		getCaretPosition: function ( options ) {
-			var range = surface.getModel().getSelection().getCoveringRange(),
+			const range = surface.getModel().getSelection().getCoveringRange(),
 				surfaceModel = surface.getModel(),
 				caretPos = range ? surfaceModel.getSourceOffsetFromOffset( range.start ) : 0;
 
 			return options.startAndEnd ?
-				[ caretPos, surfaceModel.getSourceOffsetFromOffset( range.end ) ] :
+				[ caretPos, range ? surfaceModel.getSourceOffsetFromOffset( range.end ) : 0 ] :
 				caretPos;
 		},
 		replaceSelection: function ( value ) {
@@ -88,6 +93,7 @@ ve.ui.MWWikitextSurface = function VeUiMWWikitextSurface() {
 			return this;
 		}
 	} );
+	/* eslint es-x/no-arrow-functions: off */
 };
 
 /* Inheritance */

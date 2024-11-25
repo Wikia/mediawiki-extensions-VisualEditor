@@ -1,7 +1,7 @@
 /*!
  * VisualEditor MediaWiki ArticleTargetLoader.
  *
- * @copyright 2011-2020 VisualEditor Team and others; see AUTHORS.txt
+ * @copyright See AUTHORS.txt
  * @license The MIT License (MIT); see LICENSE.txt
  */
 
@@ -16,54 +16,55 @@
  *
  * @class mw.libs.ve.targetLoader
  * @singleton
+ * @hideconstructor
  */
 ( function () {
-	var prefName, prefValue,
-		uri, editintro,
-		namespaces = mw.config.get( 'wgNamespaceIds' ),
-		conf = mw.config.get( 'wgVisualEditorConfig' ),
+	const conf = mw.config.get( 'wgVisualEditorConfig' ),
 		pluginCallbacks = [],
-		modules = [ 'ext.visualEditor.articleTarget' ]
+		modules = [
+			'ext.visualEditor.articleTarget',
 			// Add modules from $wgVisualEditorPluginModules
-			.concat( conf.pluginModules.filter( mw.loader.getState ) );
+			...conf.pluginModules.filter( mw.loader.getState )
+		];
 
-	try {
-		uri = new mw.Uri();
-		editintro = uri.query.editintro;
-	} catch ( e ) {
-		// URI may not be parseable (T106244)
-		uri = false;
-	}
+	const url = new URL( location.href );
 	// Provide the new wikitext editor
 	if (
-		uri &&
-		conf.enableWikitext &&
-		(
-			mw.user.options.get( 'visualeditor-newwikitext' ) ||
-			uri.query.veaction === 'editsource'
-		) &&
-		mw.loader.getState( 'ext.visualEditor.mwwikitext' )
+		mw.user.options.get( 'visualeditor-newwikitext' ) ||
+		url.searchParams.get( 'veaction' ) === 'editsource'
 	) {
 		modules.push( 'ext.visualEditor.mwwikitext' );
 	}
 
+	// A/B test enrollment for edit check (T342930)
+	if ( conf.editCheckABTest ) {
+		let inABTest;
+		if ( mw.user.isAnon() ) {
+			// can't just use mw.user.sessionId() because we need this to last across sessions
+			const token = mw.cookie.get( 'VEECid', '', mw.user.generateRandomSessionId() );
+			// Store the token so our state is consistent across pages
+			mw.cookie.set( 'VEECid', token, { path: '/', expires: 90 * 86400, prefix: '' } );
+			inABTest = parseInt( token.slice( 0, 8 ), 16 ) % 2 === 1;
+		} else {
+			inABTest = mw.user.getId() % 2 === 1;
+		}
+		conf.editCheck = inABTest;
+		// Communicate the bucket to instrumentation:
+		mw.config.set( 'wgVisualEditorEditCheckABTestBucket', '2024-02-editcheck-reference-' + ( inABTest ? 'test' : 'control' ) );
+	}
+
+	const editCheck = conf.editCheck || !!url.searchParams.get( 'ecenable' ) || !!window.MWVE_FORCE_EDIT_CHECK_ENABLED;
+	if ( conf.editCheckTagging || editCheck ) {
+		modules.push( 'ext.visualEditor.editCheck' );
+	}
+
+	const namespaces = mw.config.get( 'wgNamespaceIds' );
 	// Load signature tool if *any* namespace supports it.
 	// It will be shown disabled on namespaces that don't support it.
 	if (
-		Object.keys( namespaces ).some( function ( name ) {
-			return mw.Title.wantSignaturesNamespace( namespaces[ name ] );
-		} )
+		Object.keys( namespaces ).some( ( name ) => mw.Title.wantSignaturesNamespace( namespaces[ name ] ) )
 	) {
 		modules.push( 'ext.visualEditor.mwsignature' );
-	}
-
-	// Add preference modules
-	for ( prefName in conf.preferenceModules ) {
-		prefValue = mw.user.options.get( prefName );
-		// Check "0" (T89513)
-		if ( prefValue && prefValue !== '0' ) {
-			modules.push( conf.preferenceModules[ prefName ] );
-		}
 	}
 
 	mw.libs.ve = mw.libs.ve || {};
@@ -99,14 +100,20 @@
 		 * @return {jQuery.Promise} Promise resolved when the loading process is complete
 		 */
 		loadModules: function ( mode ) {
+			mw.hook( 've.loadModules' ).fire( this.addPlugin.bind( this ) );
 			ve.track( 'trace.moduleLoad.enter', { mode: mode } );
 			return mw.loader.using( modules )
-				.then( function () {
+				.then( () => {
 					ve.track( 'trace.moduleLoad.exit', { mode: mode } );
 					pluginCallbacks.push( ve.init.platform.getInitializedPromise.bind( ve.init.platform ) );
 					// Execute plugin callbacks and collect promises
-					return $.when.apply( $, pluginCallbacks.map( function ( callback ) {
-						return callback();
+					return $.when.apply( $, pluginCallbacks.map( ( callback ) => {
+						try {
+							return callback();
+						} catch ( e ) {
+							mw.log.warn( 'Failed to load VE plugin:', e );
+							return null;
+						}
 					} ) );
 				} );
 		},
@@ -115,26 +122,19 @@
 		 * Creates an OOUI checkbox inside an inline field layout
 		 *
 		 * @param {Object[]} checkboxesDef Checkbox definitions from the API
+		 * @param {Object} [widgetConfig] Additional widget config
 		 * @return {Object} Result object with checkboxFields (OO.ui.FieldLayout[]) and
 		 *  checkboxesByName (keyed object of OO.ui.CheckboxInputWidget).
 		 */
-		createCheckboxFields: function ( checkboxesDef ) {
-			var checkboxFields = [],
+		createCheckboxFields: function ( checkboxesDef, widgetConfig ) {
+			const checkboxFields = [],
 				checkboxesByName = {};
 
 			if ( checkboxesDef ) {
-				Object.keys( checkboxesDef ).forEach( function ( name ) {
-					var $label, checkbox,
-						options = checkboxesDef[ name ],
-						accesskey = null,
+				Object.keys( checkboxesDef ).forEach( ( name ) => {
+					const options = checkboxesDef[ name ];
+					let accesskey = null,
 						title = null;
-
-					// Non-checkbox fields are permitted in the 'checkboxes' definitions (since MW
-					// core 4fa7d4d7), but VE doesn't yet support them.
-					// @TODO Remove this and properly support watchlist expiry and other widgets.
-					if ( options.class !== undefined && options.class !== 'OOUI\\CheckboxInputWidget' ) {
-						return;
-					}
 
 					// The messages documented below are just the ones defined in core.
 					// Extensions may add other checkboxes.
@@ -156,22 +156,43 @@
 					// The following messages are used here:
 					// * minoredit
 					// * watchthis
-					$label = $( '<span>' ).append( mw.message( options[ 'label-message' ] ).parseDom() );
+					const $label = mw.message( options[ 'label-message' ] ).parseDom();
 
-					checkbox = new OO.ui.CheckboxInputWidget( {
+					const config = $.extend( {
 						accessKey: accesskey,
-						selected: options.default,
 						// The following classes are used here:
 						// * ve-ui-mwSaveDialog-checkbox-wpMinoredit
 						// * ve-ui-mwSaveDialog-checkbox-wpWatchthis
+						// * ve-ui-mwSaveDialog-checkbox-wpWatchlistExpiry
 						classes: [ 've-ui-mwSaveDialog-checkbox-' + name ]
-					} );
+					}, widgetConfig );
+
+					let checkbox;
+					switch ( options.class ) {
+						case 'OOUI\\DropdownInputWidget':
+							checkbox = new OO.ui.DropdownInputWidget( $.extend( config, {
+								value: options.default,
+								options: options.options
+							} ) );
+							break;
+
+						default:
+							checkbox = new OO.ui.CheckboxInputWidget( $.extend( config, {
+								selected: options.default
+							} ) );
+							break;
+					}
 
 					checkboxFields.push(
 						new OO.ui.FieldLayout( checkbox, {
 							align: 'inline',
-							label: $label.contents(),
-							title: title
+							label: $label,
+							title: title,
+							invisibleLabel: !!options.invisibleLabel,
+							// * ve-ui-mwSaveDialog-field-wpMinoredit
+							// * ve-ui-mwSaveDialog-field-wpWatchthis
+							// * ve-ui-mwSaveDialog-field-wpWatchlistExpiry
+							classes: [ 've-ui-mwSaveDialog-field-' + name ]
 						} )
 					);
 					checkboxesByName[ name ] = checkbox;
@@ -189,36 +210,36 @@
 		 *
 		 * @param {string} mode Target mode: 'visual' or 'source'
 		 * @param {string} pageName Page name to request, in prefixed DB key form (underscores instead of spaces)
-		 * @param {Object} [options] Options
+		 * @param {Object} [options]
 		 * @param {boolean} [options.sessionStore] Store result in session storage (by page+mode+section) for auto-save
 		 * @param {null|string} [options.section] Section to edit; number, 'T-'-prefixed, null or 'new' (currently just source mode)
 		 * @param {number} [options.oldId] Old revision ID. Current if omitted.
 		 * @param {string} [options.targetName] Optional target name for tracking
-		 * @param {boolean} [options.modified] The page was been modified before loading (e.g. in source mode)
+		 * @param {boolean} [options.modified] The page has been modified before loading (e.g. in source mode)
 		 * @param {string} [options.wikitext] Wikitext to convert to HTML. The original document is fetched if undefined.
+		 * @param {string} [options.editintro] Name of a page to use as edit intro message
 		 * @param {string} [options.preload] Name of a page to use as preloaded content if pageName is empty
-		 * @param {Array} [options.preloadparams] Parameters to substitute into preload if it's used
+		 * @param {string[]} [options.preloadparams] Parameters to substitute into preload if it's used
 		 * @return {jQuery.Promise} Abortable promise resolved with a JSON object
 		 */
 		requestPageData: function ( mode, pageName, options ) {
-			var sessionState, request, section, dataPromise, apiRequest, enableVisualSectionEditing;
-
 			options = options || {};
-			apiRequest = mode === 'source' ?
+			const apiRequest = mode === 'source' ?
 				this.requestWikitext.bind( this, pageName, options ) :
 				this.requestParsoidData.bind( this, pageName, options );
 
 			if ( options.sessionStore ) {
+				let sessionState;
 				try {
 					// ve.init.platform.getSessionObject is not available yet
 					sessionState = JSON.parse( mw.storage.session.get( 've-docstate' ) );
 				} catch ( e ) {}
 
 				if ( sessionState ) {
-					request = sessionState.request || {};
+					const request = sessionState.request || {};
 					// Check true section editing is in use
-					enableVisualSectionEditing = conf.enableVisualSectionEditing;
-					section = request.mode === 'source' || enableVisualSectionEditing === true || enableVisualSectionEditing === options.targetName ?
+					const enableVisualSectionEditing = conf.enableVisualSectionEditing;
+					const section = request.mode === 'source' || enableVisualSectionEditing === true || enableVisualSectionEditing === options.targetName ?
 						options.section : null;
 					// Check the requested page, mode and section match the stored one
 					if (
@@ -228,7 +249,7 @@
 						// NB we don't cache by oldid so that cached results can be recovered
 						// even if the page has been since edited
 					) {
-						dataPromise = $.Deferred().resolve( {
+						const dataPromise = $.Deferred().resolve( {
 							visualeditor: $.extend(
 								{ content: mw.storage.session.get( 've-dochtml' ) },
 								sessionState.response,
@@ -245,23 +266,21 @@
 							// This prompt will throw off all of our timing data, so just disable tracking
 							// for this session
 							ve.track = function () {};
-							return mw.loader.using( 'oojs-ui-windows' ).then( function () {
-								return OO.ui.confirm( mw.msg( 'visualeditor-autosave-modified-prompt-message' ), {
-									title: mw.msg( 'visualeditor-autosave-modified-prompt-title' ),
-									actions: [
-										{ action: 'accept', label: mw.msg( 'visualeditor-autosave-modified-prompt-accept' ), flags: [ 'primary', 'progressive' ] },
-										{ action: 'reject', label: mw.msg( 'visualeditor-autosave-modified-prompt-reject' ), flags: 'destructive' }
-									] }
-								).then( function ( confirmed ) {
-									if ( confirmed ) {
-										return dataPromise;
-									} else {
-										// If they requested the latest version, invalidate the autosave state
-										mw.storage.session.remove( 've-docstate' );
-										return apiRequest();
-									}
-								} );
-							} );
+							return mw.loader.using( 'oojs-ui-windows' ).then( () => OO.ui.confirm( mw.msg( 'visualeditor-autosave-modified-prompt-message' ), {
+								title: mw.msg( 'visualeditor-autosave-modified-prompt-title' ),
+								actions: [
+									{ action: 'accept', label: mw.msg( 'visualeditor-autosave-modified-prompt-accept' ), flags: [ 'primary', 'progressive' ] },
+									{ action: 'reject', label: mw.msg( 'visualeditor-autosave-modified-prompt-reject' ), flags: 'destructive' }
+								] }
+							).then( ( confirmed ) => {
+								if ( confirmed ) {
+									return dataPromise;
+								} else {
+									// If they requested the latest version, invalidate the autosave state
+									mw.storage.session.remove( 've-docstate' );
+									return apiRequest();
+								}
+							} ) );
 						}
 					}
 				}
@@ -282,20 +301,17 @@
 		 * @return {jQuery.Promise} Abortable promise resolved with a JSON object
 		 */
 		requestParsoidData: function ( pageName, options, noRestbase, noMetadata ) {
-			var start, apiXhr, restbaseXhr, apiPromise, restbasePromise, dataPromise, pageHtmlUrl, headers, data, abort,
-				section = options.section !== undefined ? options.section : null,
-				useRestbase = !noRestbase && ( conf.fullRestbaseUrl || conf.restbaseUrl ) && section === null,
-				switched = false,
-				fromEditedState = false;
+			const section = options.section !== undefined ? options.section : null,
+				useRestbase = !noRestbase && ( conf.fullRestbaseUrl || conf.restbaseUrl ) && section === null;
 
 			options = options || {};
-			data = {
+			const data = {
 				action: 'visualeditor',
 				paction: useRestbase ? 'metadata' : 'parse',
 				page: pageName,
 				badetag: options.badetag,
 				uselang: mw.config.get( 'wgUserLanguage' ),
-				editintro: editintro,
+				editintro: options.editintro,
 				preload: options.preload,
 				preloadparams: options.preloadparams,
 				formatversion: 2
@@ -309,9 +325,12 @@
 				data.oldid = options.oldId;
 			}
 			// Load DOM
-			start = ve.now();
+			const start = ve.now();
 			ve.track( 'trace.apiLoad.enter', { mode: 'visual' } );
 
+			let apiXhr, apiPromise;
+			let switched = false,
+				fromEditedState = false;
 			if ( !useRestbase && options.wikitext !== undefined ) {
 				// Non-RESTBase custom wikitext parse
 				data.paction = 'parse';
@@ -330,15 +349,10 @@
 				}
 			}
 			if ( !apiPromise ) {
-				apiPromise = apiXhr.then( function ( response, jqxhr ) {
+				apiPromise = apiXhr.then( ( response ) => {
 					ve.track( 'trace.apiLoad.exit', { mode: 'visual' } );
-					ve.track( 'mwtiming.performance.system.apiLoad', {
-						bytes: require( 'mediawiki.String' ).byteLength( jqxhr.responseText ),
-						duration: ve.now() - start,
-						cacheHit: /hit/i.test( jqxhr.getResponseHeader( 'X-Cache' ) ),
-						targetName: options.targetName,
-						mode: 'visual'
-					} );
+					mw.track( 'timing.ve.' + options.targetName + '.performance.system.apiLoad',
+						ve.now() - start );
 					if ( response.visualeditor ) {
 						response.visualeditor.switched = switched;
 						response.visualeditor.fromEditedState = fromEditedState;
@@ -347,16 +361,18 @@
 				} );
 			}
 
+			let dataPromise, abort;
 			if ( useRestbase ) {
 				ve.track( 'trace.restbaseLoad.enter', { mode: 'visual' } );
 
-				headers = {
-					// Should be synchronised with ApiVisualEditor.php
-					Accept: 'text/html; charset=utf-8; profile="https://www.mediawiki.org/wiki/Specs/HTML/2.0.0"',
+				const headers = {
+					// Should be synchronised with DirectParsoidClient.php
+					Accept: 'text/html; charset=utf-8; profile="https://www.mediawiki.org/wiki/Specs/HTML/2.8.0"',
 					'Accept-Language': mw.config.get( 'wgVisualEditor' ).pageLanguageCode,
 					'Api-User-Agent': 'VisualEditor-MediaWiki/' + mw.config.get( 'wgVersion' )
 				};
 
+				let restbaseXhr, pageHtmlUrl;
 				// Convert specified Wikitext to HTML
 				if (
 					// wikitext can be an empty string
@@ -401,18 +417,14 @@
 						dataType: 'text'
 					} );
 				}
-				restbasePromise = restbaseXhr.then(
-					function ( response, status, jqxhr ) {
+				const restbasePromise = restbaseXhr.then(
+					( response, status, jqxhr ) => {
 						ve.track( 'trace.restbaseLoad.exit', { mode: 'visual' } );
-						ve.track( 'mwtiming.performance.system.restbaseLoad', {
-							bytes: require( 'mediawiki.String' ).byteLength( jqxhr.responseText ),
-							duration: ve.now() - start,
-							targetName: options.targetName,
-							mode: 'visual'
-						} );
+						mw.track( 'timing.ve.' + options.targetName + '.performance.system.restbaseLoad',
+							ve.now() - start );
 						return [ response, jqxhr.getResponseHeader( 'etag' ) ];
 					},
-					function ( xhr, code, _ ) {
+					( xhr, code, _ ) => {
 						if ( xhr.status === 404 ) {
 							// Page does not exist, so let the user start with a blank document.
 							return $.Deferred().resolve( [ '', undefined ] ).promise();
@@ -424,7 +436,7 @@
 				);
 
 				dataPromise = $.when( apiPromise, restbasePromise )
-					.then( function ( apiData, restbaseData ) {
+					.then( ( apiData, restbaseData ) => {
 						if ( apiData.visualeditor ) {
 							if ( restbaseData[ 0 ] || !apiData.visualeditor.content ) {
 								// If we have actual content loaded, use it.
@@ -452,15 +464,15 @@
 				}
 			}
 
-			return dataPromise.then( function ( resp ) {
+			return dataPromise.then( ( resp ) => {
 				// Adapted from RESTBase mwUtil.parseETag()
-				var etagRegexp = /^(?:W\/)?"?([^"/]+)(?:\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}))(?:\/([^"]+))?"?$/;
+				const etagRegexp = /^(?:W\/)?"?([^"/]+)(?:\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}))(?:\/([^"]+))?"?$/;
 
 				// `etag` is expected to be undefined when creating a new page.
 				// We can detect that case by `content` being empty, and not retry.
 				if ( useRestbase && resp.visualeditor.content && (
 					!resp.visualeditor.etag ||
-					!resp.visualeditor.etag.match( etagRegexp )
+					!etagRegexp.test( resp.visualeditor.etag )
 				) ) {
 					// Direct request to RESTBase returned a mangled or missing etag.
 					// Retry via the MediaWiki API.
@@ -484,15 +496,13 @@
 		 * @return {jQuery.Promise} Abortable promise resolved with a JSON object
 		 */
 		requestWikitext: function ( pageName, options ) {
-			var data, dataPromise;
-
 			options = options || {};
-			data = {
+			const data = {
 				action: 'visualeditor',
 				paction: 'wikitext',
 				page: pageName,
 				uselang: mw.config.get( 'wgUserLanguage' ),
-				editintro: editintro,
+				editintro: options.editintro,
 				preload: options.preload,
 				preloadparams: options.preloadparams,
 				formatversion: 2
@@ -507,8 +517,8 @@
 				data.oldid = options.oldId;
 			}
 
-			dataPromise = new mw.Api().get( data );
-			return dataPromise.then( function ( resp ) {
+			const dataPromise = new mw.Api().get( data );
+			return dataPromise.then( ( resp ) => {
 				resp.veMode = 'source';
 				return resp;
 			} ).promise( { abort: dataPromise.abort } );

@@ -1,7 +1,7 @@
 /*!
  * VisualEditor user interface MWLanguagesPage class.
  *
- * @copyright 2011-2020 VisualEditor Team and others; see AUTHORS.txt
+ * @copyright See AUTHORS.txt
  * @license The MIT License (MIT); see LICENSE.txt
  */
 
@@ -14,7 +14,7 @@
  * @constructor
  * @param {string} name Unique symbolic name of page
  * @param {Object} [config] Configuration options
- * @cfg {jQuery} [$overlay] Overlay to render dropdowns in
+ * @param {jQuery} [config.$overlay] Overlay to render dropdowns in
  */
 ve.ui.MWLanguagesPage = function VeUiMWLanguagesPage() {
 	// Parent constructor
@@ -45,20 +45,14 @@ OO.inheritClass( ve.ui.MWLanguagesPage, OO.ui.PageLayout );
 /**
  * @inheritdoc
  */
-ve.ui.MWLanguagesPage.prototype.setOutlineItem = function () {
-	// Parent method
-	ve.ui.MWLanguagesPage.super.prototype.setOutlineItem.apply( this, arguments );
-
-	if ( this.outlineItem ) {
-		this.outlineItem
-			.setIcon( 'textLanguage' )
-			.setLabel( ve.msg( 'visualeditor-dialog-meta-languages-section' ) );
-	}
+ve.ui.MWLanguagesPage.prototype.setupOutlineItem = function () {
+	this.outlineItem
+		.setIcon( 'textLanguage' )
+		.setLabel( ve.msg( 'visualeditor-dialog-meta-languages-section' ) );
 };
 
 ve.ui.MWLanguagesPage.prototype.onLoadLanguageData = function ( languages ) {
-	var i,
-		$languagesTable = $( '<table>' ),
+	const $languagesTable = $( '<table>' ),
 		languageslength = languages.length;
 
 	$languagesTable
@@ -66,19 +60,19 @@ ve.ui.MWLanguagesPage.prototype.onLoadLanguageData = function ( languages ) {
 		.append( $( '<tr>' )
 			.append(
 				$( '<th>' )
-					.append( ve.msg( 'visualeditor-dialog-meta-languages-code-label' ) )
+					.text( ve.msg( 'visualeditor-dialog-meta-languages-code-label' ) )
 			)
 			.append(
 				$( '<th>' )
-					.append( ve.msg( 'visualeditor-dialog-meta-languages-name-label' ) )
+					.text( ve.msg( 'visualeditor-dialog-meta-languages-name-label' ) )
 			)
 			.append(
 				$( '<th>' )
-					.append( ve.msg( 'visualeditor-dialog-meta-languages-link-label' ) )
+					.text( ve.msg( 'visualeditor-dialog-meta-languages-link-label' ) )
 			)
 		);
 
-	for ( i = 0; i < languageslength; i++ ) {
+	for ( let i = 0; i < languageslength; i++ ) {
 		languages[ i ].safelang = languages[ i ].lang;
 		languages[ i ].dir = 'auto';
 		if ( $.uls ) {
@@ -109,10 +103,10 @@ ve.ui.MWLanguagesPage.prototype.onLoadLanguageData = function ( languages ) {
  * @param {Object} response API response
  */
 ve.ui.MWLanguagesPage.prototype.onAllLanguageItemsSuccess = function ( deferred, response ) {
-	var i, iLen, languages = [],
+	const languages = [],
 		langlinks = OO.getProp( response, 'query', 'pages', 0, 'langlinks' );
 	if ( langlinks ) {
-		for ( i = 0, iLen = langlinks.length; i < iLen; i++ ) {
+		for ( let i = 0, iLen = langlinks.length; i < iLen; i++ ) {
 			languages.push( {
 				lang: langlinks[ i ].lang,
 				langname: langlinks[ i ].autonym,
@@ -146,14 +140,13 @@ ve.ui.MWLanguagesPage.prototype.getLanguageItemFromMetaListItem = function ( met
  * @return {Object[]} items
  */
 ve.ui.MWLanguagesPage.prototype.getLocalLanguageItems = function () {
-	var i,
-		items = [],
+	const items = [],
 		languages = this.metaList.getItemsInGroup( 'mwLanguage' ),
 		languageslength = languages.length;
 
 	// Loop through MWLanguages and build out items
 
-	for ( i = 0; i < languageslength; i++ ) {
+	for ( let i = 0; i < languageslength; i++ ) {
 		items.push( this.getLanguageItemFromMetaListItem( languages[ i ] ) );
 	}
 	return items;
@@ -165,10 +158,9 @@ ve.ui.MWLanguagesPage.prototype.getLocalLanguageItems = function () {
  * @return {jQuery.Promise}
  */
 ve.ui.MWLanguagesPage.prototype.getAllLanguageItems = function () {
-	var deferred = ve.createDeferred();
+	const deferred = ve.createDeferred();
 	// TODO: Detect paging token if results exceed limit
 	ve.init.target.getContentApi().get( {
-		format: 'json',
 		action: 'query',
 		prop: 'langlinks',
 		llprop: 'autonym',

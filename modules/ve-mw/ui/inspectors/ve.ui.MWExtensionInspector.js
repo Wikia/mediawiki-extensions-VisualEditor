@@ -1,7 +1,7 @@
 /*!
  * VisualEditor UserInterface MWExtensionInspector class.
  *
- * @copyright 2011-2020 VisualEditor Team and others; see AUTHORS.txt
+ * @copyright See AUTHORS.txt
  * @license The MIT License (MIT); see LICENSE.txt
  */
 
@@ -11,7 +11,7 @@
  * @class
  * @abstract
  * @extends ve.ui.NodeInspector
- * @mixins ve.ui.MWExtensionWindow
+ * @mixes ve.ui.MWExtensionWindow
  *
  * @constructor
  * @param {Object} [config] Configuration options
@@ -51,10 +51,9 @@ ve.ui.MWExtensionInspector.prototype.initialize = function () {
  * @inheritdoc
  */
 ve.ui.MWExtensionInspector.prototype.getSetupProcess = function ( data ) {
-	var process;
 	data = data || {};
 	// Parent process
-	process = ve.ui.MWExtensionInspector.super.prototype.getSetupProcess.call( this, data );
+	const process = ve.ui.MWExtensionInspector.super.prototype.getSetupProcess.call( this, data );
 	// Mixin process
 	return ve.ui.MWExtensionWindow.prototype.getSetupProcess.call( this, data, process );
 };
@@ -63,25 +62,23 @@ ve.ui.MWExtensionInspector.prototype.getSetupProcess = function ( data ) {
  * @inheritdoc
  */
 ve.ui.MWExtensionInspector.prototype.getReadyProcess = function ( data ) {
-	var process;
 	data = data || {};
 	// Parent process
-	process = ve.ui.MWExtensionInspector.super.prototype.getReadyProcess.call( this, data );
+	const process = ve.ui.MWExtensionInspector.super.prototype.getReadyProcess.call( this, data );
 	// Mixin process
-	return ve.ui.MWExtensionWindow.prototype.getReadyProcess.call( this, data, process ).next( function () {
+	return ve.ui.MWExtensionWindow.prototype.getReadyProcess.call( this, data, process ).next( () => {
 		// Focus the input
 		this.input.focus();
-	}, this );
+	} );
 };
 
 /**
  * @inheritdoc
  */
 ve.ui.MWExtensionInspector.prototype.getTeardownProcess = function ( data ) {
-	var process;
 	data = data || {};
 	// Parent process
-	process = ve.ui.MWExtensionInspector.super.prototype.getTeardownProcess.call( this, data );
+	const process = ve.ui.MWExtensionInspector.super.prototype.getTeardownProcess.call( this, data );
 	// Mixin process
 	return ve.ui.MWExtensionWindow.prototype.getTeardownProcess.call( this, data, process );
 };
@@ -91,7 +88,7 @@ ve.ui.MWExtensionInspector.prototype.getTeardownProcess = function ( data ) {
  */
 ve.ui.MWExtensionInspector.prototype.getActionProcess = function ( action ) {
 	// Parent process
-	var process = ve.ui.MWExtensionInspector.super.prototype.getActionProcess.call( this, action );
+	const process = ve.ui.MWExtensionInspector.super.prototype.getActionProcess.call( this, action );
 	// Mixin process
 	return ve.ui.MWExtensionWindow.prototype.getActionProcess.call( this, action, process );
 };

@@ -2,6 +2,9 @@
 
 // @phpcs:disable MediaWiki.Files.ClassMatchesFilename.NotMatch
 
+use MediaWiki\Context\ContextSource;
+use MediaWiki\Title\Title;
+
 /**
  * Phan stub for the soft dependency to FlaggedRevs extension
  * There is no hard dependency and VisualEditor is a dependency to many other extensions,
@@ -10,9 +13,10 @@
 class FlaggablePageView extends ContextSource {
 
 	/**
+	 * @param Title|MediaWiki\Page\PageIdentity $title
 	 * @return self
 	 */
-	public static function singleton() {
+	public static function newFromTitle( $title ) {
 	}
 
 	/**

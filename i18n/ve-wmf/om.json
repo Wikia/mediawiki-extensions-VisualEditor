@@ -1,7 +1,7 @@
 {
 	"@metadata": {
 		"authors": [
-			"Amire80",
+			"Ahrada2016",
 			"Cedric31",
 			"Jdforrester",
 			"Muhammad Shuaib",
@@ -10,15 +10,13 @@
 			"아라"
 		]
 	},
-	"tag-visualeditor": "[[{{MediaWiki:visualeditor-descriptionpagelink}}|Argaa gulaali]",
+	"tag-visualeditor": "[[{{MediaWiki:visualeditor-descriptionpagelink}}|Argaa gulaallii]]",
 	"tag-visualeditor-description": "Gulaallii [[{{MediaWiki:visualeditor-descriptionpagelink}}|visual editor]] fayyadamuun uummame",
 	"tag-visualeditor-needcheck": "[[{{MediaWiki:visualeditor-descriptionpagelink}}|Visual edit: Check]]",
 	"tag-visualeditor-switched-description": "Fayyadamaan gulaala Viizyuwaal'Ediiteriidhan jalqabee achii booda gara Wiikiitekesti'Ediiteriitti jijjiire.",
 	"visualeditor-feedback-link": "Project:Viizyuwaal'Ediiterii/Yaada",
 	"visualeditor-feedback-tool": "Waa'ee mosaajjii kanaa yaada kenni",
 	"visualeditor-help-label": "Qajeelfama fayyadamaa dubbisi",
-	"visualeditor-help-link": "mw:Special:MyLanguage/Help:VisualEditor/User guide",
-	"visualeditor-help-title": "Qajeelcha akkaataa fayyadama Viizyuwaal'ediiterii ibsu",
 	"visualeditor-welcomedialog-action": "Gulaaluu eegali",
 	"visualeditor-welcomedialog-content": "Namuu gulaaluu danda'a, fooyya'insi kamuus ni fayyada.",
 	"visualeditor-welcomedialog-content-thanks": "Addunyaan waan haaraa akka baruuf waan gargaarteef galatoomi!",

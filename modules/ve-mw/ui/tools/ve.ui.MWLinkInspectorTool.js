@@ -1,7 +1,7 @@
 /*!
  * VisualEditor UserInterface MediaWiki LinkInspectorTool classes.
  *
- * @copyright 2011-2020 VisualEditor Team and others; see AUTHORS.txt
+ * @copyright See AUTHORS.txt
  * @license The MIT License (MIT); see LICENSE.txt
  */
 
@@ -19,14 +19,12 @@
  * @param {Object} [config] Configuration options
  */
 ve.ui.MWLinkInspectorTool = function VeUiMwLinkInspectorTool() {
-	var educationPopup;
-
 	// Parent constructor
 	ve.ui.MWLinkInspectorTool.super.apply( this, arguments );
 
-	educationPopup = new ve.ui.MWEducationPopupWidget( this.$link, {
+	const educationPopup = new ve.ui.MWEducationPopupWidget( this.$link, {
 		popupTitle: ve.msg( 'visualeditor-linkinspector-educationpopup-title' ),
-		popupText: ve.msg( 'visualeditor-linkinspector-educationpopup-text' ),
+		popupText: mw.message( 'visualeditor-linkinspector-educationpopup-text' ).parseDom(),
 		popupImage: 'link',
 		trackingName: 'link'
 	} );
@@ -40,11 +38,11 @@ OO.inheritClass( ve.ui.MWLinkInspectorTool, ve.ui.LinkInspectorTool );
 
 /* Static Properties */
 
-ve.ui.MWLinkInspectorTool.static.modelClasses =
-	ve.ui.MWLinkInspectorTool.super.static.modelClasses.concat( [
-		ve.dm.MWNumberedExternalLinkNode,
-		ve.dm.MWMagicLinkNode
-	] );
+ve.ui.MWLinkInspectorTool.static.modelClasses = [
+	...ve.ui.MWLinkInspectorTool.super.static.modelClasses,
+	ve.dm.MWNumberedExternalLinkNode,
+	ve.dm.MWMagicLinkNode
+];
 
 ve.ui.MWLinkInspectorTool.static.associatedWindows = [ 'link', 'linkNode', 'linkMagicNode' ];
 

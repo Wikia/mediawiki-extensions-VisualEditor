@@ -1,28 +1,25 @@
 /*!
  * VisualEditor MediaWiki DiffLoader.
  *
- * @copyright 2011-2020 VisualEditor Team and others; see AUTHORS.txt
+ * @copyright See AUTHORS.txt
  * @license The MIT License (MIT); see LICENSE.txt
  */
+
+/* global ve */
 
 /**
  * Diff loader.
  *
  * @class mw.libs.ve.diffLoader
  * @singleton
+ * @hideconstructor
  */
 ( function () {
-	var revCache = {};
+	const revCache = {};
 
 	mw.libs.ve = mw.libs.ve || {};
 
 	mw.libs.ve.diffLoader = {
-
-		/**
-		 * @class ve
-		 * TODO: Use @-external when we switch to JSDoc
-		 */
-
 		/**
 		 * Get a ve.dm.Document model from a Parsoid response
 		 *
@@ -31,13 +28,11 @@
 		 * @return {ve.dm.Document|null} Document, or null if an invalid response
 		 */
 		getModelFromResponse: function ( response, section ) {
-			var doc,
-				// This method is only called after actually loading these, see `parseDocumentModulePromise`
-				// eslint-disable-next-line no-undef
-				targetClass = ve.init.mw.ArticleTarget,
+			// This method is only called after actually loading these, see `parseDocumentModulePromise`
+			const targetClass = ve.init.mw.ArticleTarget,
 				data = response ? ( response.visualeditor || response.visualeditoredit ) : null;
 			if ( data && typeof data.content === 'string' ) {
-				doc = targetClass.static.parseDocument( data.content, 'visual', section, section !== null );
+				const doc = targetClass.static.parseDocument( data.content, 'visual', section, section !== null );
 				mw.libs.ve.stripRestbaseIds( doc );
 				return targetClass.static.createModelFromDom( doc, 'visual' );
 			}
@@ -54,13 +49,11 @@
 		 * @return {jQuery.Promise} Promise which resolves with a document model
 		 */
 		fetchRevision: function ( revId, pageName, section, parseDocumentModulePromise ) {
-			var cacheKey;
-
 			pageName = pageName || mw.config.get( 'wgRelevantPageName' );
 			parseDocumentModulePromise = parseDocumentModulePromise || $.Deferred().resolve().promise();
 			section = section !== undefined ? section : null;
 
-			cacheKey = revId + ( section !== null ? '/' + section : '' );
+			const cacheKey = revId + ( section !== null ? '/' + section : '' );
 
 			revCache[ cacheKey ] = revCache[ cacheKey ] ||
 				mw.libs.ve.targetLoader.requestParsoidData(
@@ -69,11 +62,15 @@
 					false,
 					// noMetadata, we only use `content` in getModelFromResponse
 					true
-				).then( function ( response ) {
-					return parseDocumentModulePromise.then( function () {
-						return mw.libs.ve.diffLoader.getModelFromResponse( response, section );
-					} );
-				} );
+				).then(
+					( response ) => parseDocumentModulePromise.then( () => mw.libs.ve.diffLoader.getModelFromResponse( response, section ) ),
+					( ...args ) => {
+						// Clear promise. Do not cache errors.
+						delete revCache[ cacheKey ];
+						// Let caller handle the error code
+						return $.Deferred().reject( ...args );
+					}
+				);
 
 			return revCache[ cacheKey ];
 		},
@@ -89,22 +86,17 @@
 		 * @return {jQuery.Promise} Promise which resolves with a ve.dm.VisualDiff generator function
 		 */
 		getVisualDiffGeneratorPromise: function ( oldIdOrPromise, newIdOrPromise, parseDocumentModulePromise, oldPageName, newPageName ) {
-			var oldRevPromise, newRevPromise;
-
 			parseDocumentModulePromise = parseDocumentModulePromise || $.Deferred().resolve().promise();
 			oldPageName = oldPageName || mw.config.get( 'wgRelevantPageName' );
 
-			oldRevPromise = typeof oldIdOrPromise === 'number' ? this.fetchRevision( oldIdOrPromise, oldPageName, null, parseDocumentModulePromise ) : oldIdOrPromise;
-			newRevPromise = typeof newIdOrPromise === 'number' ? this.fetchRevision( newIdOrPromise, newPageName, null, parseDocumentModulePromise ) : newIdOrPromise;
+			const oldRevPromise = typeof oldIdOrPromise === 'number' ? this.fetchRevision( oldIdOrPromise, oldPageName, null, parseDocumentModulePromise ) : oldIdOrPromise;
+			const newRevPromise = typeof newIdOrPromise === 'number' ? this.fetchRevision( newIdOrPromise, newPageName, null, parseDocumentModulePromise ) : newIdOrPromise;
 
-			return $.when( oldRevPromise, newRevPromise, parseDocumentModulePromise ).then( function ( oldDoc, newDoc ) {
+			return $.when( oldRevPromise, newRevPromise, parseDocumentModulePromise ).then( ( oldDoc, newDoc ) => {
 				// TODO: Differ expects newDoc to be derived from oldDoc and contain all its store data.
 				// We may want to remove that assumption from the differ?
 				newDoc.getStore().merge( oldDoc.getStore() );
-				return function () {
-					// eslint-disable-next-line no-undef
-					return new ve.dm.VisualDiff( oldDoc, newDoc );
-				};
+				return () => new ve.dm.VisualDiff( oldDoc, newDoc );
 			} );
 		}
 

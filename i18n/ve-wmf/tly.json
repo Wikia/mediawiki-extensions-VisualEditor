@@ -4,5 +4,24 @@
 			"Гусейн"
 		]
 	},
-	"tag-visualeditor": "[[{{MediaWiki:visualeditor-descriptionpagelink}}|vində redaktor]]"
+	"tag-editcheck-newcontent-description": "EditCheck hisob kardə ki bə səhifə nujə kontent əlovə kardə byə",
+	"tag-editcheck-newreference-description": "Bə səhifə link əlovə kardə byə",
+	"tag-editcheck-references-description": "EditCheck hisob kardə ki ijo link lozim bəbe",
+	"tag-visualeditor": "[[{{MediaWiki:visualeditor-descriptionpagelink}}|Vində redaktor]]",
+	"tag-visualeditor-description": "Ovaxtə byə de [[{{MediaWiki:visualeditor-descriptionpagelink}}|vində redaktori]]",
+	"tag-visualeditor-needcheck": "[[{{MediaWiki:visualeditor-descriptionpagelink}}|vində redaktor]]: osə karde",
+	"tag-visualeditor-needcheck-description": "De [[{{MediaWiki:visualeditor-descriptionpagelink}}|vində redaktori]] dastəki ovaxtə byə, komədə sistem pəjdo kardyše ovaxtə byə viki-mətni, bəzne be ǧəsto ne.",
+	"tag-visualeditor-wikitext": "2017 viki-mətni redaktor",
+	"tag-visualeditor-wikitext-description": "De viki-mətni 2017 redaktori dastəki sərost kardə byə",
+	"tag-visualeditor-switched": "[[{{MediaWiki:visualeditor-descriptionpagelink}}|vində redaktor]] okyštə byə",
+	"tag-visualeditor-switched-description": "Okoədə bino kardyše sərost karde de vində redaktori ijən pešo ovašte bə viki-mətni redaktor.",
+	"visualeditor-feedback-link": "Project:Vində redaktor/Raj",
+	"visualeditor-feedback-tool": "Raj ogəte",
+	"visualeditor-help-label": "Okoədə dərsəvoni bahandən",
+	"visualeditor-welcomedialog-action": "Sərost karde binokə",
+	"visualeditor-welcomedialog-content": "Harki bəzyne sərost karde ijən har gylə təkmil kardej dastək kardejdə.",
+	"visualeditor-welcomedialog-content-thanks": "Səgbən ki dastək kardəjon bə dynjo hənijən ve zyneǃ",
+	"visualeditor-welcomedialog-switch": "Bə bešemonə kodi redaktori dəvarde",
+	"visualeditor-welcomedialog-switch-ve": "Bə vində redaktori dəvarde",
+	"visualeditor-welcomedialog-title": "{{GENDER:$1|Xoš oməjš}} bə sajt $2"
 }

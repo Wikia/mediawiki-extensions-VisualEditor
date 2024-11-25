@@ -1,7 +1,7 @@
 /*!
  * VisualEditor user interface MWGalleryItemWidget class.
  *
- * @copyright 2011-2020 VisualEditor Team and others; see AUTHORS.txt
+ * @copyright See AUTHORS.txt
  * @license The MIT License (MIT); see LICENSE.txt
  */
 
@@ -10,21 +10,34 @@
  *
  * @class
  * @extends OO.ui.Widget
- * @mixins OO.ui.mixin.DraggableElement
+ * @mixes OO.ui.mixin.DraggableElement
  *
  * @constructor
  * @param {Object} imageInfo Image information object
  * @param {Object} [config] Configuration options
+ * @param {boolean} [config.isMobile=false]
+ * @param {boolean} [config.draggable=true]
  */
 ve.ui.MWGalleryItemWidget = function VeUiMWGalleryItemWidget( imageInfo, config ) {
 	this.resource = imageInfo.resource;
 	this.altText = imageInfo.altText || '';
+	this.altTextSame = imageInfo.altTextSame;
+	this.href = imageInfo.href;
+	// Keep the original value which may be null
+	this.originalAltText = imageInfo.altText;
 	this.src = imageInfo.src;
 	this.height = imageInfo.height;
 	this.width = imageInfo.width;
 	this.thumbUrl = imageInfo.thumbUrl;
 	this.captionDocument = imageInfo.captionDocument;
 	this.highlighted = false;
+	this.tagName = imageInfo.tagName;
+	this.isError = imageInfo.isError;
+	this.imageClassAttr = imageInfo.imageClassAttr;
+	this.imgWrapperClassAttr = imageInfo.imgWrapperClassAttr;
+	this.mw = imageInfo.mw;
+	this.mediaClass = imageInfo.mediaClass;
+	this.mediaTag = imageInfo.mediaTag;
 
 	// Configuration initialization
 	config = config || {};
@@ -33,7 +46,7 @@ ve.ui.MWGalleryItemWidget = function VeUiMWGalleryItemWidget( imageInfo, config 
 	ve.ui.MWGalleryItemWidget.super.call( this, config );
 
 	this.$element
-		.addClass( 've-ui-mwGalleryDialog-image-container' ) // TODO: put in new CSS file?
+		.addClass( 've-ui-mwGalleryDialog-image-container mw-no-invert' ) // TODO: put in new CSS file?
 		.addClass( config.isMobile ?
 			've-ui-mwGalleryDialog-image-container-mobile' :
 			've-ui-mwGalleryDialog-image-container-desktop'
@@ -60,23 +73,26 @@ OO.mixinClass( ve.ui.MWGalleryItemWidget, OO.ui.mixin.TabIndexedElement );
 /* Events */
 
 /**
- * @event edit
+ * @event ve.ui.MWGalleryItemWidget#edit
  */
 
 /* Methods */
 
 /**
  * Handle clicking on an item
+ *
+ * @fires ve.ui.MWGalleryItemWidget#edit
  */
 ve.ui.MWGalleryItemWidget.prototype.onItemClick = function () {
-	this.emit( 'edit', this );
+	this.emit( 'edit' );
 };
 
 /**
  * Handle key press events
  *
  * @param {jQuery.Event} e Key press event
- * @return {boolean}
+ * @return {boolean|undefined}
+ * @fires ve.ui.MWGalleryItemWidget#edit
  */
 ve.ui.MWGalleryItemWidget.prototype.onItemKeyPress = function ( e ) {
 	if ( e.which === OO.ui.Keys.ENTER ) {
@@ -101,6 +117,15 @@ ve.ui.MWGalleryItemWidget.prototype.setCaptionDocument = function ( captionDocum
  */
 ve.ui.MWGalleryItemWidget.prototype.setAltText = function ( altText ) {
 	this.altText = altText;
+};
+
+/**
+ * Set the altTextSame property
+ *
+ * @param {boolean} same
+ */
+ve.ui.MWGalleryItemWidget.prototype.setAltTextSame = function ( same ) {
+	this.altTextSame = same;
 };
 
 /**

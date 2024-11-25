@@ -1,7 +1,7 @@
 /*!
  * VisualEditor MediaWiki Initialization LinkCache class.
  *
- * @copyright 2011-2020 VisualEditor Team and others; see AUTHORS.txt
+ * @copyright See AUTHORS.txt
  * @license The MIT License (MIT); see LICENSE.txt
  */
 
@@ -16,10 +16,6 @@
 ve.init.mw.LinkCache = function VeInitMwLinkCache() {
 	// Parent constructor
 	ve.init.mw.LinkCache.super.apply( this, arguments );
-
-	// Keys are page names, values are link data objects
-	// This is kept for synchronous retrieval of cached values via #getCached
-	this.cacheValues = {};
 };
 
 /* Inheritance */
@@ -69,13 +65,12 @@ ve.init.mw.LinkCache.static.processPage = function ( page ) {
  *
  * @param {string} title
  * @param {jQuery} $element Element to style
- * @param {boolean} hasFragment Whether the link goes to a fragment
+ * @param {boolean} [hasFragment=false] Whether the link goes to a fragment
  */
 ve.init.mw.LinkCache.prototype.styleElement = function ( title, $element, hasFragment ) {
-	var promise,
-		cache = this,
-		cachedMissingData = this.getCached( '_missing/' + title );
+	const cachedMissingData = this.getCached( '_missing/' + title );
 
+	let promise;
 	// Use the synchronous missing link cache data if it exists
 	if ( cachedMissingData ) {
 		promise = ve.createDeferred().resolve( cachedMissingData ).promise();
@@ -83,12 +78,12 @@ ve.init.mw.LinkCache.prototype.styleElement = function ( title, $element, hasFra
 		promise = this.get( title );
 	}
 
-	promise.done( function ( data ) {
+	promise.done( ( data ) => {
 		if ( data.missing && !data.known ) {
 			$element.addClass( 'new' );
 		} else {
 			// Provided by core MediaWiki, styled like a <strong> element by default.
-			if ( !hasFragment && cache.constructor.static.normalizeTitle( title ) === cache.constructor.static.normalizeTitle( mw.config.get( 'wgRelevantPageName' ) ) ) {
+			if ( !hasFragment && this.constructor.static.normalizeTitle( title ) === this.constructor.static.normalizeTitle( mw.config.get( 'wgRelevantPageName' ) ) ) {
 				$element.addClass( 'mw-selflink' );
 			}
 			// Provided by core MediaWiki, no styles by default.
@@ -118,7 +113,7 @@ ve.init.mw.LinkCache.prototype.styleElement = function ( title, $element, hasFra
 ve.init.mw.LinkCache.prototype.styleParsoidElements = function ( $elements ) {
 	if ( ve.dm.MWLanguageVariantNode ) {
 		// Render the user's preferred variant in language converter markup
-		$elements.each( function ( i, element ) {
+		$elements.each( ( i, element ) => {
 			ve.dm.MWLanguageVariantNode.static.processVariants( element );
 		} );
 	}
@@ -144,8 +139,8 @@ ve.init.mw.LinkCache.prototype.setAssumeExistence = function ( assume ) {
  * @param {Object} entries Object keyed by page title, with the values being data objects
  */
 ve.init.mw.LinkCache.prototype.setMissing = function ( entries ) {
-	var name, missingEntries = {};
-	for ( name in entries ) {
+	const missingEntries = {};
+	for ( const name in entries ) {
 		missingEntries[ '_missing/' + name ] = entries[ name ];
 	}
 	this.set( missingEntries );
@@ -155,7 +150,7 @@ ve.init.mw.LinkCache.prototype.setMissing = function ( entries ) {
  * @inheritdoc
  */
 ve.init.mw.LinkCache.prototype.get = function ( title ) {
-	var data = {};
+	const data = {};
 	if ( this.assumeExistence ) {
 		data[ this.constructor.static.normalizeTitle( title ) ] = { missing: false };
 		this.setMissing( data );

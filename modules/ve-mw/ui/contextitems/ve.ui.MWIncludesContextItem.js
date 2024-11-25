@@ -1,7 +1,7 @@
 /*!
  * VisualEditor MWIncludesContextItem class.
  *
- * @copyright 2011-2020 VisualEditor Team and others; see http://ve.mit-license.org
+ * @copyright See AUTHORS.txt
  */
 
 /**
@@ -11,9 +11,9 @@
  * @extends ve.ui.LinearContextItem
  *
  * @constructor
- * @param {ve.ui.Context} context Context item is in
- * @param {ve.dm.Model} model Model item is related to
- * @param {Object} config Configuration options
+ * @param {ve.ui.LinearContext} context Context the item is in
+ * @param {ve.dm.Model} model Model the item is related to
+ * @param {Object} [config]
  */
 ve.ui.MWIncludesContextItem = function VeUiMWIncludesContextItem() {
 	// Parent constructor
@@ -45,38 +45,45 @@ ve.ui.MWIncludesContextItem.static.modelClasses = [
 
 /* Methods */
 
+/**
+ * @return {string}
+ */
 ve.ui.MWIncludesContextItem.prototype.getLabelMessage = function () {
-	var map = {
-		'mw:Includes/NoInclude': mw.message( 'visualeditor-includes-noinclude-start' ).text(),
-		'mw:Includes/NoInclude/End': mw.message( 'visualeditor-includes-noinclude-end' ).text(),
-		'mw:Includes/OnlyInclude': mw.message( 'visualeditor-includes-onlyinclude-start' ).text(),
-		'mw:Includes/OnlyInclude/End': mw.message( 'visualeditor-includes-onlyinclude-end' ).text(),
-		'mw:Includes/IncludeOnly': mw.message( 'visualeditor-includes-includeonly' ).text()
-	};
-	return map[ this.model.getAttribute( 'type' ) ];
+	const key = {
+		'mw:Includes/NoInclude': 'visualeditor-includes-noinclude-start',
+		'mw:Includes/NoInclude/End': 'visualeditor-includes-noinclude-end',
+		'mw:Includes/OnlyInclude': 'visualeditor-includes-onlyinclude-start',
+		'mw:Includes/OnlyInclude/End': 'visualeditor-includes-onlyinclude-end',
+		'mw:Includes/IncludeOnly': 'visualeditor-includes-includeonly'
+	}[ this.model.getAttribute( 'type' ) ];
+	// eslint-disable-next-line mediawiki/msg-doc
+	return key ? mw.message( key ).text() : '';
 };
 
+/**
+ * @return {jQuery}
+ */
 ve.ui.MWIncludesContextItem.prototype.getDescriptionMessage = function () {
-	var map = {
-		'mw:Includes/NoInclude': mw.message( 'visualeditor-includes-noinclude-description' ).parseDom(),
-		'mw:Includes/OnlyInclude': mw.message( 'visualeditor-includes-onlyinclude-description' ).parseDom(),
-		'mw:Includes/IncludeOnly': mw.message( 'visualeditor-includes-includeonly-description' ).parseDom()
-	};
-	return map[ this.model.getAttribute( 'type' ) ] || '';
+	const key = {
+		'mw:Includes/NoInclude': 'visualeditor-includes-noinclude-description',
+		'mw:Includes/OnlyInclude': 'visualeditor-includes-onlyinclude-description',
+		'mw:Includes/IncludeOnly': 'visualeditor-includes-includeonly-description'
+	}[ this.model.getAttribute( 'type' ) ];
+	// eslint-disable-next-line mediawiki/msg-doc
+	return key ? mw.message( key ).parseDom() : $( [] );
 };
 
 /**
  * @inheritdoc
  */
 ve.ui.MWIncludesContextItem.prototype.renderBody = function () {
-	var wikitext;
-
 	this.$body.empty();
 
-	this.$body.append( this.getDescriptionMessage() ).append( mw.msg( 'word-separator' ) );
+	const $desc = this.getDescriptionMessage();
+	this.$body.append( $desc, $( document.createTextNode( mw.msg( 'word-separator' ) ) ) );
 
 	if ( this.model.getAttribute( 'mw' ) ) {
-		wikitext = this.model.getAttribute( 'mw' ).src;
+		let wikitext = this.model.getAttribute( 'mw' ).src;
 		// The opening and closing tags are included, eww
 		wikitext = wikitext.replace( /^<includeonly>\s*([\s\S]*)\s*<\/includeonly>$/, '$1' );
 		this.$body.append( $( '<pre>' )
@@ -89,7 +96,8 @@ ve.ui.MWIncludesContextItem.prototype.renderBody = function () {
 		);
 	}
 
-	this.$body.append( mw.message( 'visualeditor-includes-documentation' ).parseDom() );
+	const $docMsg = mw.message( 'visualeditor-includes-documentation' ).parseDom();
+	this.$body.append( $docMsg );
 };
 
 /* Registration */

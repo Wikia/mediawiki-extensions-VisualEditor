@@ -1,7 +1,7 @@
 /*!
  * VisualEditor MediaWiki UserInterface transclusion tool classes.
  *
- * @copyright 2011-2020 VisualEditor Team and others; see AUTHORS.txt
+ * @copyright See AUTHORS.txt
  * @license The MIT License (MIT); see LICENSE.txt
  */
 
@@ -52,10 +52,8 @@ ve.ui.MWTransclusionDialogTool.static.template = null;
  * @inheritdoc
  */
 ve.ui.MWTransclusionDialogTool.static.isCompatibleWith = function ( model ) {
-	var compatible;
-
 	// Parent method
-	compatible = ve.ui.MWTransclusionDialogTool.super.static.isCompatibleWith.call( this, model );
+	const compatible = ve.ui.MWTransclusionDialogTool.super.static.isCompatibleWith.call( this, model );
 
 	if ( compatible && this.template ) {
 		return model.isSingleTemplate( this.template );

@@ -1,7 +1,7 @@
 /*!
  * VisualEditor UserInterface MWMobileSaveDialog class.
  *
- * @copyright 2011-2020 VisualEditor Team and others; see AUTHORS.txt
+ * @copyright See AUTHORS.txt
  * @license The MIT License (MIT); see LICENSE.txt
  */
 
@@ -35,21 +35,19 @@ OO.inheritClass( ve.ui.MWMobileSaveDialog, ve.ui.MWSaveDialog );
  * @inheritdoc
  */
 ve.ui.MWMobileSaveDialog.prototype.initialize = function () {
-	var mobile, skin, licenseMsg;
-
 	// Parent method
 	ve.ui.MWMobileSaveDialog.super.prototype.initialize.call( this );
 
 	this.$reviewVisualDiff.addClass( 'content' );
+	this.previewPanel.$element.addClass( 'content' );
 
-	if ( mw.mobileFrontend ) {
-		mobile = mw.mobileFrontend.require( 'mobile.startup' );
-		skin = mobile.Skin.getSingleton();
-		licenseMsg = skin.getLicenseMsg();
+	mw.loader.using( 'mobile.startup' ).then( ( req ) => {
+		const licenseMsg = req( 'mobile.startup' ).license();
 		if ( licenseMsg ) {
+			// eslint-disable-next-line no-jquery/no-html
 			this.$license.html( licenseMsg );
 		}
-	}
+	} );
 };
 
 /* Registration */

@@ -1,7 +1,7 @@
 /*!
  * VisualEditor MediaWiki Initialization DesktopArticleTarget class.
  *
- * @copyright 2011-2020 VisualEditor Team and others; see AUTHORS.txt
+ * @copyright See AUTHORS.txt
  * @license The MIT License (MIT); see LICENSE.txt
  */
 
@@ -14,7 +14,7 @@
  * @extends ve.init.mw.ArticleTarget
  *
  * @constructor
- * @param {Object} config Configuration options
+ * @param {Object} [config]
  */
 ve.init.mw.DesktopArticleTarget = function VeInitMwDesktopArticleTarget( config ) {
 	// Parent constructor
@@ -32,6 +32,7 @@ ve.init.mw.DesktopArticleTarget = function VeInitMwDesktopArticleTarget( config 
 	this.onUnloadHandler = this.onUnload.bind( this );
 	this.activating = false;
 	this.deactivating = false;
+	this.deactivatingDeferred = null;
 	this.recreating = false;
 	this.activatingDeferred = null;
 	this.toolbarSetupDeferred = null;
@@ -52,37 +53,29 @@ ve.init.mw.DesktopArticleTarget = function VeInitMwDesktopArticleTarget( config 
 	if ( $( '#wpSummary' ).length ) {
 		this.initialEditSummary = $( '#wpSummary' ).val();
 	} else {
-		this.initialEditSummary = this.currentUri.query.summary;
+		this.initialEditSummary = this.currentUrl.searchParams.get( 'summary' );
 	}
 	this.initialCheckboxes = $( '.editCheckboxes input' ).toArray()
-		.reduce( function ( initialCheckboxes, node ) {
+		.reduce( ( initialCheckboxes, node ) => {
 			initialCheckboxes[ node.name ] = node.checked;
 			return initialCheckboxes;
 		}, {} );
 
-	this.viewUri = new mw.Uri( mw.util.getUrl( this.getPageName() ) );
-	this.isViewPage = (
-		mw.config.get( 'wgAction' ) === 'view' &&
-		this.currentUri.query.diff === undefined
-	);
-
 	this.tabLayout = mw.config.get( 'wgVisualEditorConfig' ).tabLayout;
 	this.events = new ve.init.mw.ArticleTargetEvents( this );
 	this.$originalContent = $( '<div>' ).addClass( 've-init-mw-desktopArticleTarget-originalContent' );
-	this.$editableContent = this.getEditableContent().addClass( 've-init-mw-desktopArticleTarget-editableContent' );
+	this.$editableContent.addClass( 've-init-mw-desktopArticleTarget-editableContent' );
 
 	// Initialization
 	this.$element
 		.addClass( 've-init-mw-desktopArticleTarget' )
 		.append( this.$originalContent );
 
-	if ( history.replaceState ) {
-		// We replace the current state with one that's marked with our tag. This way, when users
-		// use the Back button to exit the editor we can restore Read mode. This is because we want
-		// to ignore foreign states in onWindowPopState. Without this, the Read state is foreign.
-		// FIXME: There should be a much better solution than this.
-		history.replaceState( this.popState, document.title, this.currentUri );
-	}
+	// We replace the current state with one that's marked with our tag. This way, when users
+	// use the Back button to exit the editor we can restore Read mode. This is because we want
+	// to ignore foreign states in onWindowPopState. Without this, the Read state is foreign.
+	// FIXME: There should be a much better solution than this.
+	history.replaceState( this.popState, '', this.currentUrl );
 
 	this.setupSkinTabs();
 
@@ -95,93 +88,91 @@ OO.inheritClass( ve.init.mw.DesktopArticleTarget, ve.init.mw.ArticleTarget );
 
 /* Static Properties */
 
-ve.init.mw.DesktopArticleTarget.static.actionGroups = [
+ve.init.mw.DesktopArticleTarget.static.toolbarGroups = ve.copy( ve.init.mw.DesktopArticleTarget.static.toolbarGroups );
+ve.init.mw.DesktopArticleTarget.static.toolbarGroups.push(
 	{
 		name: 'help',
-		include: [ 'help', 'notices' ]
+		align: 'after',
+		type: 'mwHelpList',
+		icon: 'help',
+		indicator: null,
+		title: ve.msg( 'visualeditor-help-tool' ),
+		include: [ { group: 'help' } ],
+		promote: [ 'mwUserGuide' ]
+	},
+	{
+		name: 'notices',
+		align: 'after',
+		include: [ { group: 'notices' } ]
 	},
 	{
 		name: 'pageMenu',
+		align: 'after',
 		type: 'list',
 		icon: 'menu',
 		indicator: null,
 		title: ve.msg( 'visualeditor-pagemenu-tooltip' ),
 		label: ve.msg( 'visualeditor-pagemenu-tooltip' ),
 		invisibleLabel: true,
-		include: [ 'meta', 'categories', 'settings', 'advancedSettings', 'languages', 'templatesUsed', 'changeDirectionality', 'findAndReplace' ]
+		include: [ { group: 'utility' } ],
+		demote: [ 'changeDirectionality', 'findAndReplace' ]
 	},
 	{
 		name: 'editMode',
+		align: 'after',
 		type: 'list',
 		icon: 'edit',
 		title: ve.msg( 'visualeditor-mweditmode-tooltip' ),
 		label: ve.msg( 'visualeditor-mweditmode-tooltip' ),
 		invisibleLabel: true,
-		include: [ 'editModeVisual', 'editModeSource' ]
+		include: [ { group: 'editMode' } ]
 	},
 	{
 		name: 'save',
+		align: 'after',
 		type: 'bar',
-		include: [ 'showSave' ]
+		include: [ { group: 'save' } ]
 	}
-];
-
-/**
- * Compatibility map used with jQuery.client to decide if a browser should
- * receive a compatibility warning. Blacklisting is handled in DesktopArticleTarget.init.
- *
- * @static
- * @property {Object}
- */
-ve.init.mw.DesktopArticleTarget.static.compatibility = {
-	// The key is the browser name returned by jQuery.client
-	// The value is either null (match all versions) or a list of tuples
-	// containing an inequality (<,>,<=,>=) and a version number
-	supportedList: {
-		chrome: [ [ '>=', 19 ] ],
-		opera: [ [ '>=', 15 ] ],
-		// All versions not in unsupportedList are fully supported:
-		firefox: null,
-		safari: null,
-		msie: null,
-		edge: null
-	}
-};
+);
 
 ve.init.mw.DesktopArticleTarget.static.platformType = 'desktop';
 
 /* Events */
 
 /**
- * @event deactivate
+ * @event ve.init.mw.DesktopArticleTarget#deactivate
  */
 
 /**
- * @event transformPage
+ * @event ve.init.mw.DesktopArticleTarget#transformPage
  */
 
 /**
- * @event restorePage
+ * @event ve.init.mw.DesktopArticleTarget#restorePage
  */
 
 /**
- * @event saveWorkflowBegin
  * Fired when user clicks the button to open the save dialog.
+ *
+ * @event ve.init.mw.DesktopArticleTarget#saveWorkflowBegin
  */
 
 /**
- * @event saveWorkflowEnd
  * Fired when user exits the save workflow
+ *
+ * @event ve.init.mw.DesktopArticleTarget#saveWorkflowEnd
  */
 
 /**
- * @event saveReview
  * Fired when user initiates review changes in save workflow
+ *
+ * @event ve.init.mw.DesktopArticleTarget#saveReview
  */
 
 /**
- * @event saveInitiated
  * Fired when user initiates saving of the document
+ *
+ * @event ve.init.mw.DesktopArticleTarget#saveInitiated
  */
 
 /* Methods */
@@ -190,23 +181,25 @@ ve.init.mw.DesktopArticleTarget.static.platformType = 'desktop';
  * @inheritdoc
  */
 ve.init.mw.DesktopArticleTarget.prototype.addSurface = function ( dmDoc, config ) {
-	config = ve.extendObject( { $overlayContainer: $( '#content' ) }, config );
-	return ve.init.mw.DesktopArticleTarget.parent.prototype.addSurface.call( this, dmDoc, config );
-};
-
-/**
- * Get the editable part of the page
- *
- * @return {jQuery} Editable DOM selection
- */
-ve.init.mw.DesktopArticleTarget.prototype.getEditableContent = function () {
-	return $( '#mw-content-text' );
+	config = ve.extendObject( {
+		$overlayContainer: $(
+			document.querySelector( '[data-mw-ve-target-container]' ) ||
+			document.getElementById( 'content' )
+		),
+		// Vector-2022 content area has no padding itself, so popups render too close
+		// to the edge of the text (T258501). Use a negative value to allow popups to
+		// position slightly outside the content. Padding elsewhere means we are
+		// guaranteed 30px of space between the content and the edge of the viewport.
+		// Other skins pass 'undefined' to use the default padding of +10px.
+		overlayPadding: mw.config.get( 'skin' ) === 'vector-2022' ? -10 : undefined
+	}, config );
+	return ve.init.mw.DesktopArticleTarget.super.prototype.addSurface.call( this, dmDoc, config );
 };
 
 /**
  * Set the container for the target, appending the target to it
  *
- * @param {jQuery} $container Container
+ * @param {jQuery} $container
  */
 ve.init.mw.DesktopArticleTarget.prototype.setContainer = function ( $container ) {
 	$container.append( this.$element );
@@ -216,7 +209,7 @@ ve.init.mw.DesktopArticleTarget.prototype.setContainer = function ( $container )
 /**
  * Verify that a PopStateEvent correlates to a state we created.
  *
- * @param {Mixed} popState From PopStateEvent#state
+ * @param {any} popState From PopStateEvent#state
  * @return {boolean}
  */
 ve.init.mw.DesktopArticleTarget.prototype.verifyPopState = function ( popState ) {
@@ -227,48 +220,34 @@ ve.init.mw.DesktopArticleTarget.prototype.verifyPopState = function ( popState )
  * @inheritdoc
  */
 ve.init.mw.DesktopArticleTarget.prototype.setupToolbar = function ( surface ) {
-	var toolbar,
-		mode = surface.getMode(),
-		wasSetup = !!this.toolbar,
-		target = this;
+	const mode = surface.getMode(),
+		wasSetup = !!this.toolbar;
 
 	ve.track( 'trace.setupToolbar.enter', { mode: mode } );
 
 	// Parent method
 	ve.init.mw.DesktopArticleTarget.super.prototype.setupToolbar.call( this, surface );
 
-	toolbar = this.getToolbar();
+	const toolbar = this.getToolbar();
+
+	// Allow the toolbar to start floating now if necessary
+	this.onContainerScroll();
 
 	ve.track( 'trace.setupToolbar.exit', { mode: mode } );
 	if ( !wasSetup ) {
-		// eslint-disable-next-line no-jquery/no-class-state
-		if ( $( 'html' ).hasClass( 've-tempSourceEditing' ) ) {
-			toolbar.$element
-				.css( 'height', '' )
-				.addClass( 've-init-mw-desktopArticleTarget-toolbar-open' )
-				.addClass( 've-init-mw-desktopArticleTarget-toolbar-opened' );
-			this.toolbarSetupDeferred.resolve();
-		} else {
-			setTimeout( function () {
-				toolbar.$element
-					.css( 'height', toolbar.$bar[ 0 ].offsetHeight )
-					.addClass( 've-init-mw-desktopArticleTarget-toolbar-open' );
-				setTimeout( function () {
-					// Clear to allow growth during use and when resizing window
-					toolbar.$element
-						.css( 'height', '' )
-						.addClass( 've-init-mw-desktopArticleTarget-toolbar-opened' );
-					target.toolbarSetupDeferred.resolve();
-				}, 250 );
-			} );
+		toolbar.$element
+			.addClass( 've-init-mw-desktopArticleTarget-toolbar-open' );
+		if ( !toolbar.isFloating() ) {
+			toolbar.$element.css( 'height', '' );
 		}
+		this.toolbarSetupDeferred.resolve();
 
-		this.toolbarSetupDeferred.done( function () {
-			var newSurface = target.getSurface();
+		this.toolbarSetupDeferred.done( () => {
+			const newSurface = this.getSurface();
 			// Check the surface wasn't torn down while the toolbar was animating
 			if ( newSurface ) {
 				ve.track( 'trace.initializeToolbar.enter', { mode: mode } );
-				target.getToolbar().initialize();
+				this.getToolbar().initialize();
 				newSurface.getView().emit( 'position' );
 				newSurface.getContext().updateDimensions();
 				ve.track( 'trace.initializeToolbar.exit', { mode: mode } );
@@ -282,6 +261,18 @@ ve.init.mw.DesktopArticleTarget.prototype.setupToolbar = function ( surface ) {
  * @inheritdoc
  */
 ve.init.mw.DesktopArticleTarget.prototype.attachToolbar = function () {
+	// Set edit notices, will be shown after welcome dialog.
+	// Make sure notices actually exists, because this might be a mode-switch and
+	// we've already removed it.
+	const editNotices = this.getEditNotices(),
+		actionTools = this.toolbar.tools;
+	if ( editNotices && editNotices.length && actionTools.notices ) {
+		actionTools.notices.setNotices( editNotices );
+	} else if ( actionTools.notices ) {
+		actionTools.notices.destroy();
+		actionTools.notices = null;
+	}
+
 	// Move the toolbar to top of target, before heading etc.
 	// Avoid re-attaching as it breaks CSS animations
 	if ( !this.toolbar.$element.parent().is( this.$element ) ) {
@@ -290,6 +281,10 @@ ve.init.mw.DesktopArticleTarget.prototype.attachToolbar = function () {
 			.css( 'height', '0' )
 			.addClass( 've-init-mw-desktopArticleTarget-toolbar' );
 		this.$element.prepend( this.toolbar.$element );
+
+		// Calculate if the 'oo-ui-toolbar-narrow' class is needed (OOUI does it too late for our
+		// toolbar because the methods are called in the wrong order, see T92282).
+		this.toolbar.onWindowResize();
 	}
 };
 
@@ -297,31 +292,20 @@ ve.init.mw.DesktopArticleTarget.prototype.attachToolbar = function () {
  * @inheritdoc
  */
 ve.init.mw.DesktopArticleTarget.prototype.setupToolbarSaveButton = function () {
-	this.toolbarSaveButton = this.actionsToolbar.getToolGroupByName( 'save' ).items[ 0 ];
+	this.toolbarSaveButton = this.toolbar.getToolGroupByName( 'save' ).items[ 0 ];
 };
 
 /**
- * Set up notices for things like unknown browsers.
- * Needs to be done on each activation because localNoticeMessages is cleared in clearState.
+ * @inheritdoc
  */
-ve.init.mw.DesktopArticleTarget.prototype.setupLocalNoticeMessages = function () {
-	if ( !(
-		'vesupported' in this.currentUri.query ||
-		$.client.test( this.constructor.static.compatibility.supportedList, null, true )
-	) ) {
-		// Show warning in unknown browsers that pass the support test
-		// Continue at own risk.
-		this.localNoticeMessages.push( 'visualeditor-browserwarning' );
-	}
+ve.init.mw.DesktopArticleTarget.prototype.updateTabs = function () {
+	mw.libs.ve.updateTabs( true, this.getDefaultMode(), this.section === 'new' );
 };
 
 /**
  * @inheritdoc
  */
 ve.init.mw.DesktopArticleTarget.prototype.loadSuccess = function () {
-	var windowManager,
-		target = this;
-
 	// Parent method
 	ve.init.mw.DesktopArticleTarget.super.prototype.loadSuccess.apply( this, arguments );
 
@@ -331,17 +315,17 @@ ve.init.mw.DesktopArticleTarget.prototype.loadSuccess = function () {
 	if ( $( '#ca-edit' ).hasClass( 'visualeditor-showtabdialog' ) ) {
 		$( '#ca-edit' ).removeClass( 'visualeditor-showtabdialog' );
 		// Set up a temporary window manager
-		windowManager = new OO.ui.WindowManager();
-		$( document.body ).append( windowManager.$element );
+		const windowManager = new OO.ui.WindowManager();
+		$( OO.ui.getTeleportTarget() ).append( windowManager.$element );
 		this.editingTabDialog = new mw.libs.ve.EditingTabDialog();
 		windowManager.addWindows( [ this.editingTabDialog ] );
 		windowManager.openWindow( this.editingTabDialog )
-			.closed.then( function ( data ) {
+			.closed.then( ( data ) => {
 				// Detach the temporary window manager
 				windowManager.destroy();
 
 				if ( data && data.action === 'prefer-wt' ) {
-					target.switchToWikitextEditor( false );
+					this.switchToWikitextEditor( false );
 				} else if ( data && data.action === 'multi-tab' ) {
 					location.reload();
 				}
@@ -356,18 +340,19 @@ ve.init.mw.DesktopArticleTarget.prototype.loadSuccess = function () {
 /**
  * Handle the watch button being toggled on/off.
  *
- * @param {jQuery.Event} e Event object which triggered the event
- * @param {string} actionPerformed 'watch' or 'unwatch'
+ * @param {boolean} isWatched
+ * @param {string} expiry
+ * @param {string} expirySelected
  */
-ve.init.mw.DesktopArticleTarget.prototype.onWatchToggle = function ( e, actionPerformed ) {
+ve.init.mw.DesktopArticleTarget.prototype.onWatchToggle = function ( isWatched ) {
 	if ( !this.active && !this.activating ) {
 		return;
 	}
-	if ( this.checkboxesByName.wpWatchthis ) {
+	if ( this.checkboxesByName && this.checkboxesByName.wpWatchthis ) {
 		this.checkboxesByName.wpWatchthis.setSelected(
 			!!mw.user.options.get( 'watchdefault' ) ||
 			( !!mw.user.options.get( 'watchcreations' ) && !this.pageExists ) ||
-			actionPerformed === 'watch'
+			isWatched
 		);
 	}
 };
@@ -378,7 +363,7 @@ ve.init.mw.DesktopArticleTarget.prototype.onWatchToggle = function ( e, actionPe
 ve.init.mw.DesktopArticleTarget.prototype.bindHandlers = function () {
 	ve.init.mw.DesktopArticleTarget.super.prototype.bindHandlers.call( this );
 	if ( this.onWatchToggleHandler ) {
-		$( '#ca-watch, #ca-unwatch' ).on( 'watchpage.mw', this.onWatchToggleHandler );
+		mw.hook( 'wikipage.watchlistChange' ).add( this.onWatchToggleHandler );
 	}
 };
 
@@ -388,7 +373,7 @@ ve.init.mw.DesktopArticleTarget.prototype.bindHandlers = function () {
 ve.init.mw.DesktopArticleTarget.prototype.unbindHandlers = function () {
 	ve.init.mw.DesktopArticleTarget.super.prototype.unbindHandlers.call( this );
 	if ( this.onWatchToggleHandler ) {
-		$( '#ca-watch, #ca-unwatch' ).off( 'watchpage.mw', this.onWatchToggleHandler );
+		mw.hook( 'wikipage.watchlistChange' ).remove( this.onWatchToggleHandler );
 	}
 };
 
@@ -400,9 +385,6 @@ ve.init.mw.DesktopArticleTarget.prototype.unbindHandlers = function () {
  * @return {jQuery.Promise}
  */
 ve.init.mw.DesktopArticleTarget.prototype.activate = function ( dataPromise ) {
-	var surface,
-		target = this;
-
 	// We may be re-activating an old target, during which time ve.init.target
 	// has been overridden.
 	ve.init.target = ve.init.articleTarget;
@@ -413,9 +395,13 @@ ve.init.mw.DesktopArticleTarget.prototype.activate = function ( dataPromise ) {
 		this.toolbarSetupDeferred = ve.createDeferred();
 
 		$( 'html' ).addClass( 've-activating' );
-		ve.promiseAll( [ this.activatingDeferred, this.toolbarSetupDeferred ] ).done( function () {
-			target.afterActivate();
-		} ).fail( function () {
+		ve.promiseAll( [ this.activatingDeferred, this.toolbarSetupDeferred ] ).done( () => {
+			if ( !this.suppressNormalStartupDialogs ) {
+				this.maybeShowWelcomeDialog();
+				this.maybeShowMetaDialog();
+			}
+			this.afterActivate();
+		} ).fail( () => {
 			$( 'html' ).removeClass( 've-activating' );
 		} );
 
@@ -425,23 +411,9 @@ ve.init.mw.DesktopArticleTarget.prototype.activate = function ( dataPromise ) {
 		this.originalEditondbclick = mw.user.options.get( 'editondblclick' );
 		mw.user.options.set( 'editondblclick', 0 );
 
-		// Save the scroll position; will be restored by surfaceReady()
-		this.saveScrollPosition();
-
 		// User interface changes
 		this.changeDocumentTitle();
 		this.transformPage();
-		this.setupLocalNoticeMessages();
-
-		// Create dummy surface to show toolbar while loading
-		// Call ve.init.Target directly to avoid firing surfaceReady
-		surface = ve.init.Target.prototype.addSurface.call( this, new ve.dm.Document( [
-			{ type: 'paragraph' }, { type: '/paragraph' },
-			{ type: 'internalList' }, { type: '/internalList' }
-		] ) );
-		surface.setReadOnly( true );
-		// setSurface creates dummy toolbar
-		this.setSurface( surface );
 
 		this.load( dataPromise );
 	}
@@ -452,12 +424,13 @@ ve.init.mw.DesktopArticleTarget.prototype.activate = function ( dataPromise ) {
  * Edit mode has finished activating
  */
 ve.init.mw.DesktopArticleTarget.prototype.afterActivate = function () {
-	var surfaceModel, range;
 	$( 'html' ).removeClass( 've-activating' ).addClass( 've-active' );
 
 	// Disable TemplateStyles in the original content
 	// (We do this here because toggling 've-active' class above hides it)
 	this.$editableContent.find( 'style[data-mw-deduplicate^="TemplateStyles:"]' ).prop( 'disabled', true );
+
+	this.afterSurfaceReady();
 
 	if ( !this.editingTabDialog ) {
 		if ( this.sectionTitle ) {
@@ -471,8 +444,8 @@ ve.init.mw.DesktopArticleTarget.prototype.afterActivate = function () {
 		}
 		// Transfer and initial source range to the surface (e.g. from tempWikitextEditor)
 		if ( this.initialSourceRange && this.getSurface().getMode() === 'source' ) {
-			surfaceModel = this.getSurface().getModel();
-			range = surfaceModel.getRangeFromSourceOffsets( this.initialSourceRange.from, this.initialSourceRange.to );
+			const surfaceModel = this.getSurface().getModel();
+			const range = surfaceModel.getRangeFromSourceOffsets( this.initialSourceRange.from, this.initialSourceRange.to );
 			surfaceModel.setLinearSelection( range );
 		}
 	}
@@ -482,7 +455,7 @@ ve.init.mw.DesktopArticleTarget.prototype.afterActivate = function () {
  * @inheritdoc
  */
 ve.init.mw.DesktopArticleTarget.prototype.setSurface = function ( surface ) {
-	var resetSurface = surface !== this.surface;
+	const resetSurface = surface !== this.surface;
 
 	if ( resetSurface ) {
 		this.$editableContent.after( surface.$element );
@@ -499,15 +472,14 @@ ve.init.mw.DesktopArticleTarget.prototype.setSurface = function ( surface ) {
 /**
  * Setup new section input for a surface, if required
  *
- * @param {ve.ui.Surface} surface Surface
+ * @param {ve.ui.Surface} surface
  */
 ve.init.mw.DesktopArticleTarget.prototype.setupNewSection = function ( surface ) {
 	if ( surface.getMode() === 'source' && this.section === 'new' ) {
 		if ( !this.sectionTitle ) {
 			this.sectionTitle = new OO.ui.TextInputWidget( {
 				$element: $( '<h2>' ),
-				classes: [ 've-ui-init-desktopArticleTarget-sectionTitle' ],
-				maxLength: 255,
+				classes: [ 've-init-mw-desktopArticleTarget-sectionTitle' ],
 				placeholder: ve.msg( 'visualeditor-section-title-placeholder' ),
 				spellcheck: true
 			} );
@@ -521,8 +493,8 @@ ve.init.mw.DesktopArticleTarget.prototype.setupNewSection = function ( surface )
 		surface.setPlaceholder( ve.msg( 'visualeditor-section-body-placeholder' ) );
 		this.$editableContent.before( this.sectionTitle.$element );
 
-		if ( this.currentUri.query.preloadtitle ) {
-			this.sectionTitle.setValue( this.currentUri.query.preloadtitle );
+		if ( this.currentUrl.searchParams.has( 'preloadtitle' ) ) {
+			this.sectionTitle.setValue( this.currentUrl.searchParams.get( 'preloadtitle' ) );
 		}
 		surface.once( 'destroy', this.teardownNewSection.bind( this, surface ) );
 	} else {
@@ -541,7 +513,7 @@ ve.init.mw.DesktopArticleTarget.prototype.onSectionTitleChange = function () {
 /**
  * Teardown new section inputs
  *
- * @param {ve.ui.Surface} surface Surface
+ * @param {ve.ui.Surface} surface
  */
 ve.init.mw.DesktopArticleTarget.prototype.teardownNewSection = function ( surface ) {
 	surface.setPlaceholder( '' );
@@ -560,7 +532,7 @@ ve.init.mw.DesktopArticleTarget.prototype.teardownNewSection = function ( surfac
  */
 ve.init.mw.DesktopArticleTarget.prototype.tryTeardown = function ( noPrompt, trackMechanism ) {
 	if ( this.deactivating || ( !this.active && !this.activating ) ) {
-		return;
+		return this.teardownPromise || ve.createDeferred().resolve().promise();
 	}
 
 	// Just in case these weren't closed before
@@ -580,16 +552,11 @@ ve.init.mw.DesktopArticleTarget.prototype.tryTeardown = function ( noPrompt, tra
  * @inheritdoc
  *
  * @param {string} [trackMechanism]
- * @fires deactivate
+ * @fires ve.init.mw.DesktopArticleTarget#deactivate
  */
 ve.init.mw.DesktopArticleTarget.prototype.teardown = function ( trackMechanism ) {
-	var abortType,
-		saveDialogPromise = ve.createDeferred().resolve().promise(),
-		target = this;
-
-	this.emit( 'deactivate' );
-
 	// Event tracking
+	let abortType, abortedMode;
 	if ( trackMechanism ) {
 		if ( this.activating ) {
 			abortType = 'preinit';
@@ -602,18 +569,17 @@ ve.init.mw.DesktopArticleTarget.prototype.teardown = function ( trackMechanism )
 			// they go through switchToWikitextEditor() instead
 			abortType = 'abandon';
 		}
-		ve.track( 'mwedit.abort', {
-			type: abortType,
-			mechanism: trackMechanism,
-			mode: this.surface ? this.surface.getMode() : this.getDefaultMode()
-		} );
+		abortedMode = this.surface ? this.surface.getMode() : this.getDefaultMode();
 	}
 
 	// Cancel activating, start deactivating
 	this.deactivating = true;
+	this.deactivatingDeferred = ve.createDeferred();
 	this.activating = false;
 	this.activatingDeferred.reject();
 	$( 'html' ).addClass( 've-deactivating' ).removeClass( 've-activated ve-active' );
+
+	this.emit( 'deactivate' );
 
 	// Restore TemplateStyles of the original content
 	// (We do this here because toggling 've-active' class above displays it)
@@ -633,45 +599,47 @@ ve.init.mw.DesktopArticleTarget.prototype.teardown = function ( trackMechanism )
 		}
 	}
 
-	if ( this.saveDialog ) {
-		if ( this.saveDialog.isOpened() ) {
-			// If the save dialog is still open (from saving) close it
-			saveDialogPromise = this.saveDialog.close().closed;
+	// Parent method
+	return ve.init.mw.DesktopArticleTarget.super.prototype.teardown.call( this ).then( () => {
+		// After teardown
+		this.active = false;
+
+		// If there is a load in progress, try to abort it
+		if ( this.loading && this.loading.abort ) {
+			this.loading.abort();
 		}
-		// Release the reference
-		this.saveDialog = null;
-	}
 
-	return saveDialogPromise.then( function () {
-		// Parent method
-		return ve.init.mw.DesktopArticleTarget.super.prototype.teardown.call( target ).then( function () {
-			// After teardown
-			target.active = false;
+		this.clearState();
+		this.initialEditSummary = new URL( location.href ).searchParams.get( 'summary' );
+		this.editSummaryValue = null;
 
-			// If there is a load in progress, try to abort it
-			if ( target.loading && target.loading.abort ) {
-				target.loading.abort();
+		// Move original content back out of the target
+		this.$element.parent().append( this.$originalContent.children() );
+
+		$( '.ve-init-mw-desktopArticleTarget-uneditableContent' )
+			.removeClass( 've-init-mw-desktopArticleTarget-uneditableContent' );
+
+		this.deactivating = false;
+		this.deactivatingDeferred.resolve();
+		$( 'html' ).removeClass( 've-deactivating' );
+
+		// Event tracking
+		if ( trackMechanism ) {
+			ve.track( 'editAttemptStep', {
+				action: 'abort',
+				type: abortType,
+				mechanism: trackMechanism,
+				mode: abortedMode
+			} );
+		}
+
+		if ( !this.isViewPage ) {
+			const newUrl = new URL( this.viewUrl );
+			if ( mw.config.get( 'wgIsRedirect' ) ) {
+				newUrl.searchParams.set( 'redirect', 'no' );
 			}
-
-			target.clearState();
-			target.initialEditSummary = new mw.Uri().query.summary;
-			target.editSummaryValue = null;
-
-			target.deactivating = false;
-			$( 'html' ).removeClass( 've-deactivating' );
-
-			// Move original content back out of the target
-			target.$element.parent().append( target.$originalContent.children() );
-
-			$( '.ve-init-mw-desktopArticleTarget-uneditableContent' )
-				.removeClass( 've-init-mw-desktopArticleTarget-uneditableContent' );
-
-			if ( !target.isViewPage ) {
-				location.href = target.viewUri.clone().extend( {
-					redirect: mw.config.get( 'wgIsRedirect' ) ? 'no' : undefined
-				} );
-			}
-		} );
+			location.href = newUrl;
+		}
 	} );
 };
 
@@ -679,38 +647,47 @@ ve.init.mw.DesktopArticleTarget.prototype.teardown = function ( trackMechanism )
  * @inheritdoc
  */
 ve.init.mw.DesktopArticleTarget.prototype.loadFail = function ( code, errorDetails ) {
-	var $confirmPromptMessage,
-		target = this;
-
 	// Parent method
 	ve.init.mw.DesktopArticleTarget.super.prototype.loadFail.apply( this, arguments );
 
 	if ( this.wikitextFallbackLoading ) {
 		// Failed twice now
 		mw.log.warn( 'Failed to fall back to wikitext', code, errorDetails );
-		location.href = target.viewUri.clone().extend( { action: 'edit', veswitched: 1 } );
+		const newUrl = new URL( this.viewUrl );
+		newUrl.searchParams.set( 'action', 'edit' );
+		newUrl.searchParams.set( 'veswitched', '1' );
+		location.href = newUrl;
 		return;
 	}
 
-	$confirmPromptMessage = this.extractErrorMessages( errorDetails );
+	if ( !this.activating ) {
+		// Load failed after activation abandoned (e.g. user pressed escape).
+		// Nothing more to do.
+		return;
+	}
+
+	const $confirmPromptMessage = this.extractErrorMessages( errorDetails );
 
 	OO.ui.confirm( $confirmPromptMessage, {
 		actions: [
 			{ action: 'accept', label: OO.ui.msg( 'ooui-dialog-process-retry' ), flags: 'primary' },
 			{ action: 'reject', label: OO.ui.msg( 'ooui-dialog-message-reject' ), flags: 'safe' }
 		]
-	} ).done( function ( confirmed ) {
+	} ).done( ( confirmed ) => {
 		if ( confirmed ) {
-			target.load();
-		} else if ( $( '#wpTextbox1' ).length && !target.isModeAvailable( 'source' ) ) {
-			// If we're switching from the wikitext editor, just deactivate
-			// don't try to switch back to it fully, that'd discard changes.
-			target.tryTeardown( true );
+			// Retry load
+			this.load();
 		} else {
-			target.activatingDeferred.reject();
-			// TODO: Some sort of progress bar?
-			target.wikitextFallbackLoading = true;
-			target.switchToWikitextEditor( false );
+			// User pressed "cancel"
+			if ( this.getSurface() ) {
+				// Restore the mode of the current surface
+				this.setDefaultMode( this.getSurface().getMode() );
+				this.activatingDeferred.reject();
+			} else {
+				// We're switching from read mode or the 2010 wikitext editor:
+				// just give up and stay where you are
+				this.tryTeardown( true );
+			}
 		}
 	} );
 };
@@ -719,29 +696,25 @@ ve.init.mw.DesktopArticleTarget.prototype.loadFail = function ( code, errorDetai
  * @inheritdoc
  */
 ve.init.mw.DesktopArticleTarget.prototype.surfaceReady = function () {
-	var redirectMetaItems, metaList,
-		editNotices = this.getEditNotices(),
-		actionTools = this.actionsToolbar.tools,
-		surface = this.getSurface(),
-		target = this;
-
 	if ( !this.activating ) {
 		// Activation was aborted before we got here. Do nothing
 		// TODO are there things we need to clean up?
 		return;
 	}
 
+	const surface = this.getSurface();
+
 	this.activating = false;
 
 	// TODO: mwTocWidget should probably live in a ve.ui.MWSurface subclass
 	if ( mw.config.get( 'wgVisualEditorConfig' ).enableTocWidget ) {
 		surface.mwTocWidget = new ve.ui.MWTocWidget( this.getSurface() );
-		surface.once( 'destroy', function () {
+		surface.once( 'destroy', () => {
 			surface.mwTocWidget.$element.remove();
 		} );
 	}
 
-	metaList = this.getSurface().getModel().getMetaList();
+	const metaList = this.getSurface().getModel().getDocument().getMetaList();
 
 	metaList.connect( this, {
 		insert: 'onMetaItemInserted',
@@ -752,37 +725,17 @@ ve.init.mw.DesktopArticleTarget.prototype.surfaceReady = function () {
 	// existing page, or loading via an edit URL.
 	this.rebuildCategories( metaList.getItemsInGroup( 'mwCategory' ), true );
 
-	// Support: IE<=11
-	// IE requires us to defer before restoring the scroll position
-	setTimeout( function () {
-		target.restoreScrollPosition();
-	} );
-
 	// Parent method
 	ve.init.mw.DesktopArticleTarget.super.prototype.surfaceReady.apply( this, arguments );
 
-	redirectMetaItems = this.getSurface().getModel().getMetaList().getItemsInGroup( 'mwRedirect' );
+	const redirectMetaItems = metaList.getItemsInGroup( 'mwRedirect' );
 	if ( redirectMetaItems.length ) {
 		this.setFakeRedirectInterface( redirectMetaItems[ 0 ].getAttribute( 'title' ) );
 	} else {
 		this.setFakeRedirectInterface( null );
 	}
 
-	// Set edit notices, will be shown after meta dialog.
-	// Make sure notices actually exists, because this might be a mode-switch and
-	// we've already removed it.
-	if ( editNotices.length ) {
-		actionTools.notices.setNotices( editNotices );
-	} else if ( actionTools.notices ) {
-		actionTools.notices.destroy();
-		actionTools.notices = null;
-	}
-
 	this.setupUnloadHandlers();
-	if ( !this.suppressNormalStartupDialogs ) {
-		this.maybeShowWelcomeDialog();
-		this.maybeShowMetaDialog();
-	}
 
 	this.activatingDeferred.resolve();
 	this.events.trackActivationComplete();
@@ -794,14 +747,15 @@ ve.init.mw.DesktopArticleTarget.prototype.surfaceReady = function () {
  * @param {ve.dm.MetaItem} metaItem Item that was inserted
  */
 ve.init.mw.DesktopArticleTarget.prototype.onMetaItemInserted = function ( metaItem ) {
-	var metaList = this.getSurface().getModel().getMetaList();
 	switch ( metaItem.getType() ) {
 		case 'mwRedirect':
 			this.setFakeRedirectInterface( metaItem.getAttribute( 'title' ) );
 			break;
-		case 'mwCategory':
+		case 'mwCategory': {
+			const metaList = this.getSurface().getModel().getDocument().getMetaList();
 			this.rebuildCategories( metaList.getItemsInGroup( 'mwCategory' ) );
 			break;
+		}
 	}
 };
 
@@ -813,14 +767,15 @@ ve.init.mw.DesktopArticleTarget.prototype.onMetaItemInserted = function ( metaIt
  * @param {number} index Index within that offset the item was at
  */
 ve.init.mw.DesktopArticleTarget.prototype.onMetaItemRemoved = function ( metaItem ) {
-	var metaList = this.getSurface().getModel().getMetaList();
 	switch ( metaItem.getType() ) {
 		case 'mwRedirect':
 			this.setFakeRedirectInterface( null );
 			break;
-		case 'mwCategory':
+		case 'mwCategory': {
+			const metaList = this.getSurface().getModel().getDocument().getMetaList();
 			this.rebuildCategories( metaList.getItemsInGroup( 'mwCategory' ) );
 			break;
+		}
 	}
 };
 
@@ -833,12 +788,11 @@ ve.init.mw.DesktopArticleTarget.prototype.onMetaItemRemoved = function ( metaIte
  * @param {ve.dm.MetaItem[]} categoryItems Array of category metaitems to display
  */
 ve.init.mw.DesktopArticleTarget.prototype.rebuildCategories = function ( categoryItems ) {
-	var target = this;
-	this.renderCategories( categoryItems ).done( function ( $categories ) {
+	this.renderCategories( categoryItems ).done( ( $categories ) => {
 		// Clone the existing catlinks for any specific properties which might
 		// be needed by the rest of the page. Also gives us a not-attached
 		// version, which we can pass to wikipage.categories as it requests.
-		var $catlinks = $( '#catlinks' ).clone().empty().removeClass( 'categories-allhidden' )
+		const $catlinks = $( '#catlinks' ).clone().empty().removeClass( 'categories-allhidden' )
 			.append( $categories.children() );
 		// If all categories are hidden, we need to hide the box.
 		$catlinks.toggleClass( 'catlinks-allhidden',
@@ -849,40 +803,10 @@ ve.init.mw.DesktopArticleTarget.prototype.rebuildCategories = function ( categor
 			// eslint-disable-next-line no-jquery/no-sizzle
 			$catlinks.find( '.mw-hidden-catlinks:visible' ).length === 0
 		);
-		target.transformCategoryLinks( $catlinks );
+		this.transformCategoryLinks( $catlinks );
 		mw.hook( 'wikipage.categories' ).fire( $catlinks );
 		$( '#catlinks' ).replaceWith( $catlinks );
 	} );
-};
-
-/**
- * Handle Escape key presses.
- *
- * @param {jQuery.Event} e Keydown event
- */
-ve.init.mw.DesktopArticleTarget.prototype.onDocumentKeyDown = function ( e ) {
-	var target = this;
-
-	// Parent method
-	ve.init.mw.DesktopArticleTarget.super.prototype.onDocumentKeyDown.apply( this, arguments );
-
-	if ( e.which === OO.ui.Keys.ESCAPE ) {
-		setTimeout( function () {
-			var toolbarDialogs;
-			// Listeners should stopPropagation if they handle the escape key, but
-			// also check they didn't fire after this event, as would be the case if
-			// they were bound to the document.
-			if ( !e.isPropagationStopped() ) {
-				toolbarDialogs = target.surface.getToolbarDialogs();
-				if ( toolbarDialogs.getCurrentWindow() ) {
-					toolbarDialogs.getCurrentWindow().close();
-				} else {
-					target.tryTeardown( false, 'navigate-read' );
-				}
-			}
-		} );
-		e.preventDefault();
-	}
 };
 
 /**
@@ -902,94 +826,30 @@ ve.init.mw.DesktopArticleTarget.prototype.onViewTabClick = function ( e ) {
  * @inheritdoc
  */
 ve.init.mw.DesktopArticleTarget.prototype.saveComplete = function ( data ) {
-	var newUrlParams, watch,
-		target = this;
-
 	// Parent method
 	ve.init.mw.DesktopArticleTarget.super.prototype.saveComplete.apply( this, arguments );
 
-	if ( !this.pageExists || this.restoring ) {
-		// Teardown the target, ensuring auto-save data is cleared
-		this.teardown().then( function () {
-
-			// This is a page creation or restoration, refresh the page
-			newUrlParams = data.newrevid === undefined ? {} : { venotify: target.restoring ? 'restored' : 'created' };
-
-			if ( data.isRedirect ) {
-				newUrlParams.redirect = 'no';
-			}
-			location.href = target.viewUri.extend( newUrlParams );
-		} );
-	} else {
-		// Update watch link to match 'watch checkbox' in save dialog.
-		// User logged in if module loaded.
-		if ( mw.loader.getState( 'mediawiki.page.watch.ajax' ) === 'ready' ) {
-			watch = require( 'mediawiki.page.watch.ajax' );
-
-			watch.updateWatchLink(
-				$( '#ca-watch a, #ca-unwatch a' ),
-				data.watched ? 'unwatch' : 'watch',
-				'idle',
-				data.watchlistexpiry
-			);
+	// If there is no content, then parent method will reload the whole page
+	if ( !data.nocontent ) {
+		// Fix permalinks
+		if ( data.newrevid !== undefined ) {
+			$( '#t-permalink' ).add( '#coll-download-as-rl' ).find( 'a' ).each( ( i, el ) => {
+				const permalinkUrl = new URL( el.href );
+				permalinkUrl.searchParams.set( 'oldid', data.newrevid );
+				$( el ).attr( 'href', permalinkUrl.toString() );
+			} );
 		}
 
-		// If we were explicitly editing an older version, make sure we won't
-		// load the same old version again, now that we've saved the next edit
-		// will be against the latest version.
-		// If there is an ?oldid= parameter in the URL, this will cause restorePage() to remove it.
-		this.restoring = false;
-
-		// Clear requestedRevId in case it was set by a retry or something; after saving
-		// we don't want to go back into oldid mode anyway
-		this.requestedRevId = undefined;
-
 		if ( data.newrevid !== undefined ) {
+			// (T370771) Update wgCurRevisionId and wgRevisionId (!)
+			// Mirror of DiscussionTools's cb5d585b93d83f9a7b4df10a71a0d574295f861c
 			mw.config.set( {
 				wgCurRevisionId: data.newrevid,
 				wgRevisionId: data.newrevid
 			} );
-			this.revid = data.newrevid;
-			this.currentRevisionId = data.newrevid;
-		}
 
-		// Update module JS config values and notify ResourceLoader of any new
-		// modules needed to be added to the page
-		mw.config.set( data.jsconfigvars );
-		// Also load postEdit in case it's needed, below.
-		mw.loader.load( data.modules.concat( [ 'mediawiki.action.view.postEdit' ] ) );
-
-		mw.config.set( {
-			wgIsRedirect: !!data.isRedirect
-		} );
-
-		this.saveDialog.reset();
-		this.replacePageContent(
-			data.content,
-			data.categorieshtml,
-			data.displayTitleHtml,
-			data.lastModified,
-			data.contentSub
-		);
-
-		if ( data.newrevid !== undefined ) {
-			$( '#t-permalink a, #coll-download-as-rl a' ).each( function () {
-				var uri = new mw.Uri( $( this ).attr( 'href' ) );
-				uri.query.oldid = data.newrevid;
-				$( this ).attr( 'href', uri.toString() );
-			} );
-		}
-
-		// Tear down the target now that we're done saving
-		// Not passing trackMechanism because this isn't an abort action
-		this.tryTeardown( true );
-		if ( data.newrevid !== undefined ) {
-			mw.hook( 'postEdit' ).fire( {
-				// The following messages are used here:
-				// * postedit-confirmation-published
-				// * postedit-confirmation-saved
-				message: ve.msg( 'postedit-confirmation-' + ( mw.config.get( 'wgEditSubmitButtonLabelPublish' ) ? 'published' : 'saved' ), mw.user )
-			} );
+			// Actually fire the postEdit hook, now that the save is complete
+			require( 'mediawiki.action.view.postEdit' ).fireHook( 'saved' );
 		}
 	}
 };
@@ -999,21 +859,16 @@ ve.init.mw.DesktopArticleTarget.prototype.saveComplete = function ( data ) {
  */
 ve.init.mw.DesktopArticleTarget.prototype.serialize = function () {
 	// Parent method
-	var promise = ve.init.mw.DesktopArticleTarget.super.prototype.serialize.apply( this, arguments ),
-		target = this;
+	const promise = ve.init.mw.DesktopArticleTarget.super.prototype.serialize.apply( this, arguments );
 
-	return promise.fail( function ( error, response ) {
-		OO.ui.alert(
-			$( ve.htmlMsg(
-				'visualeditor-serializeerror',
-				$( '<span>' ).append( target.extractErrorMessages( response ) )[ 0 ]
-			) )
-		);
+	return promise.fail( ( error, response ) => {
+		const $errorMessages = this.extractErrorMessages( response );
+		OO.ui.alert( $errorMessages );
 
 		// It's possible to get here while the save dialog has never been opened (if the user uses
 		// the switch to source mode option)
-		if ( target.saveDialog ) {
-			target.saveDialog.popPending();
+		if ( this.saveDialog ) {
+			this.saveDialog.popPending();
 		}
 	} );
 };
@@ -1034,26 +889,23 @@ ve.init.mw.DesktopArticleTarget.prototype.onToolbarMetaButtonClick = function ()
  * 'Edit' and single edit tab are bound in mw.DesktopArticleTarget.init.
  */
 ve.init.mw.DesktopArticleTarget.prototype.setupSkinTabs = function () {
-	var namespaceNumber, namespaceName, isTalkNamespace, namespaceKey, namespaceTabId;
-	if ( this.isViewPage ) {
-		namespaceNumber = mw.config.get( 'wgNamespaceNumber' );
-		namespaceName = mw.config.get( 'wgCanonicalNamespace' );
-		isTalkNamespace = mw.Title.isTalkNamespace( namespaceNumber );
-		// Title::getNamespaceKey()
-		namespaceKey = namespaceName.toLowerCase() || 'main';
-		if ( namespaceKey === 'file' ) {
-			namespaceKey = 'image';
-		}
-		// SkinTemplate::buildContentNavigationUrls()
-		if ( isTalkNamespace ) {
-			namespaceTabId = 'ca-talk';
-		} else {
-			namespaceTabId = 'ca-nstab-' + namespaceKey;
-		}
-		// Allow instant switching back to view mode, without refresh
-		$( '#ca-view a, #' + namespaceTabId + ' a' )
-			.on( 'click.ve-target', this.onViewTabClick.bind( this ) );
+	const namespaceNumber = mw.config.get( 'wgNamespaceNumber' );
+	const namespaceName = mw.config.get( 'wgCanonicalNamespace' );
+	const isTalkNamespace = mw.Title.isTalkNamespace( namespaceNumber );
+	// Title::getNamespaceKey()
+	let namespaceKey = namespaceName.toLowerCase() || 'main';
+	if ( namespaceKey === 'file' ) {
+		namespaceKey = 'image';
 	}
+	let namespaceTabId;
+	// SkinTemplate::buildContentNavigationUrls()
+	if ( isTalkNamespace ) {
+		namespaceTabId = 'ca-talk';
+	} else {
+		namespaceTabId = 'ca-nstab-' + namespaceKey;
+	}
+	$( '#ca-view' ).add( '#' + namespaceTabId ).find( 'a' )
+		.on( 'click.ve-target', this.onViewTabClick.bind( this ) );
 
 	// Used by Extension:GuidedTour
 	mw.hook( 've.skinTabSetupComplete' ).fire();
@@ -1063,55 +915,33 @@ ve.init.mw.DesktopArticleTarget.prototype.setupSkinTabs = function () {
  * @inheritdoc
  */
 ve.init.mw.DesktopArticleTarget.prototype.getSaveDialogOpeningData = function () {
-	var data = ve.init.mw.DesktopArticleTarget.super.prototype.getSaveDialogOpeningData.apply( this, arguments );
+	const data = ve.init.mw.DesktopArticleTarget.super.prototype.getSaveDialogOpeningData.apply( this, arguments );
 	data.editSummary = this.editSummaryValue || this.initialEditSummary;
 	return data;
-};
-
-/**
- * Remember the window's scroll position.
- */
-ve.init.mw.DesktopArticleTarget.prototype.saveScrollPosition = function () {
-	if ( ( this.getDefaultMode() === 'source' || this.enableVisualSectionEditing ) && this.section !== null ) {
-		// Reset scroll to top if doing real section editing
-		this.scrollTop = 0;
-	} else {
-		this.scrollTop = $( window ).scrollTop();
-	}
-};
-
-/**
- * Restore the window's scroll position.
- */
-ve.init.mw.DesktopArticleTarget.prototype.restoreScrollPosition = function () {
-	if ( this.scrollTop !== null ) {
-		$( window ).scrollTop( this.scrollTop );
-		this.scrollTop = null;
-	}
 };
 
 /**
  * @inheritdoc
  */
 ve.init.mw.DesktopArticleTarget.prototype.teardownToolbar = function () {
-	var target = this,
-		deferred = ve.createDeferred();
+	const deferred = ve.createDeferred();
 
 	if ( !this.toolbar ) {
 		return deferred.resolve().promise();
 	}
 
-	this.toolbar.$element.css( 'height', this.toolbar.$bar[ 0 ].offsetHeight );
-	setTimeout( function () {
-		target.toolbar.$element
+	this.toolbar.$element
+		.addClass( 've-init-mw-desktopArticleTarget-toolbar-preclose' )
+		.css( 'height', this.toolbar.$bar[ 0 ].offsetHeight );
+	requestAnimationFrame( () => {
+		this.toolbar.$element
 			.css( 'height', '0' )
-			.removeClass( 've-init-mw-desktopArticleTarget-toolbar-open' )
-			.removeClass( 've-init-mw-desktopArticleTarget-toolbar-opened' );
-		setTimeout( function () {
+			.addClass( 've-init-mw-desktopArticleTarget-toolbar-close' );
+		this.toolbar.$element.one( 'transitionend', () => {
 			// Parent method
-			ve.init.mw.DesktopArticleTarget.super.prototype.teardownToolbar.call( target );
+			ve.init.mw.DesktopArticleTarget.super.prototype.teardownToolbar.call( this );
 			deferred.resolve();
-		}, 250 );
+		} );
 	} );
 	return deferred.promise();
 };
@@ -1120,34 +950,42 @@ ve.init.mw.DesktopArticleTarget.prototype.teardownToolbar = function () {
  * Change the document title to state that we are now editing.
  */
 ve.init.mw.DesktopArticleTarget.prototype.changeDocumentTitle = function () {
-	var title = mw.Title.newFromText( this.getPageName() );
-
-	// Use the real title if we loaded a view page, otherwise reconstruct it
-	this.originalDocumentTitle = this.isViewPage ? document.title : ve.msg( 'pagetitle', title.getPrefixedText() );
-
-	// Reconstruct an edit title
-	document.title = ve.msg( 'pagetitle',
+	const title = mw.Title.newFromText( this.getPageName() );
+	const pageTitleMsg = mw.message( 'pagetitle',
 		ve.msg(
 			this.pageExists ? 'editing' : 'creating',
 			title.getPrefixedText()
 		)
 	);
+
+	// T317600
+	if ( pageTitleMsg.isParseable() ) {
+		// Use the real title if we loaded a view page, otherwise reconstruct it
+		this.originalDocumentTitle = this.isViewPage ? document.title : ve.msg( 'pagetitle', title.getPrefixedText() );
+		// Reconstruct an edit title
+		document.title = pageTitleMsg.text();
+	} else {
+		mw.log.warn( 'VisualEditor: MediaWiki:Pagetitle contains unsupported syntax. ' +
+			'https://www.mediawiki.org/wiki/Manual:Messages_API#Feature_support_in_JavaScript' );
+	}
 };
 
 /**
  * Restore the original document title.
  */
 ve.init.mw.DesktopArticleTarget.prototype.restoreDocumentTitle = function () {
-	document.title = this.originalDocumentTitle;
+	if ( this.originalDocumentTitle ) {
+		document.title = this.originalDocumentTitle;
+	}
 };
 
 /**
  * Page modifications for switching to edit mode.
+ *
+ * @fires ve.init.mw.DesktopArticleTarget#transformPage
  */
 ve.init.mw.DesktopArticleTarget.prototype.transformPage = function () {
-	var $content;
-
-	this.updateTabs( true );
+	this.updateTabs();
 	this.emit( 'transformPage' );
 
 	// TODO: Deprecate in favour of ve.activationComplete
@@ -1156,19 +994,41 @@ ve.init.mw.DesktopArticleTarget.prototype.transformPage = function () {
 
 	// Move all native content inside the target
 	// Exclude notification area to work around T143837
-	this.$originalContent.append( this.$element.siblings().not( '.mw-notification-area' ) );
+	this.$originalContent.append(
+		this.$element.siblings()
+			.not( '.mw-notification-area' )
+			.not( '.ve-init-mw-desktopArticleTarget-toolbarPlaceholder' )
+	);
 
-	this.$originalCategories = $( '#catlinks' ).clone( true );
+	// To preserve event handlers (e.g. HotCat) if editing is cancelled, detach the original container
+	// and replace it with a clone during editing
+	this.$originalCategories = $( '#catlinks' );
+	this.$originalCategories.after( this.$originalCategories.clone() );
+	this.$originalCategories.detach();
 
 	// Mark every non-direct ancestor between editableContent and the container as uneditable
-	$content = this.$editableContent;
+	let $content = this.$editableContent;
 	while ( $content && $content.length && !$content.parent().is( this.$container ) ) {
 		$content.prevAll( ':not( .ve-init-mw-tempWikitextEditorWidget )' ).addClass( 've-init-mw-desktopArticleTarget-uneditableContent' );
 		$content.nextAll( ':not( .ve-init-mw-tempWikitextEditorWidget )' ).addClass( 've-init-mw-desktopArticleTarget-uneditableContent' );
 		$content = $content.parent();
 	}
 
+	this.restoreEditTabsIfNeeded( $content );
 	this.updateHistoryState();
+};
+
+/**
+ * Checks the edit/view tabs have not been marked as disabled. The view tab provides a way
+ * to exit the VisualEditor so its important it is not marked as uneditable.
+ *
+ * @param {jQuery} $content area
+ */
+ve.init.mw.DesktopArticleTarget.prototype.restoreEditTabsIfNeeded = function ( $content ) {
+	const $viewTab = $content.find( '.ve-init-mw-desktopArticleTarget-uneditableContent #ca-view' );
+	if ( $viewTab.length ) {
+		$viewTab.parents( '.ve-init-mw-desktopArticleTarget-uneditableContent' ).removeClass( 've-init-mw-desktopArticleTarget-uneditableContent' );
+	}
 };
 
 /**
@@ -1178,12 +1038,11 @@ ve.init.mw.DesktopArticleTarget.prototype.transformPage = function () {
  * @param {jQuery} $catlinks Category links container element
  */
 ve.init.mw.DesktopArticleTarget.prototype.transformCategoryLinks = function ( $catlinks ) {
-	var target = this;
 	// Un-disable the catlinks wrapper, but not the links
 	if ( this.getSurface() && this.getSurface().getMode() === 'visual' ) {
 		$catlinks.removeClass( 've-init-mw-desktopArticleTarget-uneditableContent' )
-			.on( 'click.ve-target', function () {
-				var windowAction = ve.ui.actionFactory.create( 'window', target.getSurface() );
+			.on( 'click.ve-target', () => {
+				const windowAction = ve.ui.actionFactory.create( 'window', this.getSurface() );
 				windowAction.open( 'meta', { page: 'categories' } );
 				return false;
 			} )
@@ -1197,54 +1056,47 @@ ve.init.mw.DesktopArticleTarget.prototype.transformCategoryLinks = function ( $c
  * Update the history state based on the editor mode
  */
 ve.init.mw.DesktopArticleTarget.prototype.updateHistoryState = function () {
-	var uri,
-		veaction = this.getDefaultMode() === 'visual' ? 'edit' : 'editsource',
-		section = this.section !== null ? this.section : undefined;
+	const veaction = this.getDefaultMode() === 'visual' ? 'edit' : 'editsource',
+		section = this.section;
 
-	// Push veaction=edit(source) url in history (if not already. If we got here by a veaction=edit(source)
-	// permalink then it will be there already and the constructor called #activate)
+	// Push veaction=edit(source) url in history (if not already present).
+	// If we got here from DesktopArticleTarget.init, then it will be already present.
 	if (
 		!this.actFromPopState &&
-		history.pushState &&
 		(
-			this.currentUri.query.veaction !== veaction ||
-			this.currentUri.query.section !== section
+			this.currentUrl.searchParams.get( 'veaction' ) !== veaction ||
+			this.currentUrl.searchParams.get( 'section' ) !== section
 		) &&
-		this.currentUri.query.action !== 'edit'
+		this.currentUrl.searchParams.get( 'action' ) !== 'edit'
 	) {
 		// Set the current URL
-		uri = this.currentUri;
+		const url = this.currentUrl;
 
 		if ( mw.libs.ve.isSingleEditTab ) {
-			uri.query.action = 'edit';
+			url.searchParams.set( 'action', 'edit' );
 			mw.config.set( 'wgAction', 'edit' );
 		} else {
-			uri.query.veaction = veaction;
-			delete uri.query.action;
+			url.searchParams.set( 'veaction', veaction );
+			url.searchParams.delete( 'action' );
 			mw.config.set( 'wgAction', 'view' );
 		}
 		if ( this.section !== null ) {
-			uri.query.section = this.section;
+			url.searchParams.set( 'section', this.section );
 		} else {
-			delete uri.query.section;
+			url.searchParams.delete( 'section' );
 		}
 
-		history.pushState( this.popState, document.title, uri );
+		history.pushState( this.popState, '', url );
 	}
 	this.actFromPopState = false;
 };
 
 /**
  * Page modifications for switching back to view mode.
+ *
+ * @fires ve.init.mw.DesktopArticleTarget#restorePage
  */
 ve.init.mw.DesktopArticleTarget.prototype.restorePage = function () {
-	var uri, keys, fragment, target;
-
-	// Skins like monobook don't have a tab for view mode and instead just have the namespace tab
-	// selected. We didn't deselect the namespace tab, so we're ready after deselecting #ca-ve-edit.
-	// In skins having #ca-view (like Vector), select that.
-	this.updateTabs( false );
-
 	// Restore any previous redirectMsg/redirectsub
 	this.setRealRedirectInterface();
 	if ( this.$originalCategories ) {
@@ -1256,48 +1108,58 @@ ve.init.mw.DesktopArticleTarget.prototype.restorePage = function () {
 	this.emit( 'restorePage' );
 
 	// Push article url into history
-	if ( !this.actFromPopState && history.pushState ) {
+	if ( !this.actFromPopState ) {
 		// Remove the VisualEditor query parameters
-		uri = this.currentUri;
-		if ( 'veaction' in uri.query ) {
-			delete uri.query.veaction;
+		const url = this.currentUrl;
+		if ( url.searchParams.has( 'veaction' ) ) {
+			url.searchParams.delete( 'veaction' );
 		}
 		if ( this.section !== null ) {
-			// Translate into a fragment for the new URI:
+			// Translate into a hash for the new URL:
 			// This should be after replacePageContent if this is post-save, so we can just look
 			// at the headers on the page.
-			fragment = this.getSectionFragmentFromPage( this.$editableContent );
-			if ( fragment ) {
-				uri.fragment = fragment;
-				this.viewUri.fragment = fragment;
-				target = document.getElementById( fragment );
+			const hash = this.getSectionHashFromPage();
+			if ( hash ) {
+				url.hash = hash;
+				this.viewUrl.hash = hash;
+				const target = document.getElementById( hash.slice( 1 ) );
 
 				if ( target ) {
 					// Scroll the page to the edited section
-					setTimeout( function () {
+					setTimeout( () => {
 						target.scrollIntoView( true );
 					} );
 				}
 			}
-			delete uri.query.section;
+			url.searchParams.delete( 'section' );
 		}
-		if ( 'action' in uri.query && $( '#wpTextbox1:not(.ve-dummyTextbox)' ).length === 0 ) {
+		if ( url.searchParams.has( 'action' ) && $( '#wpTextbox1:not(.ve-dummyTextbox)' ).length === 0 ) {
 			// If we're not overlaid on an edit page, remove action=edit
-			delete uri.query.action;
+			url.searchParams.delete( 'action' );
 			mw.config.set( 'wgAction', 'view' );
 		}
-		if ( 'oldid' in uri.query && !this.restoring ) {
+		if ( url.searchParams.has( 'oldid' ) && !this.restoring ) {
 			// We have an oldid in the query string but it's the most recent one, so remove it
-			delete uri.query.oldid;
+			url.searchParams.delete( 'oldid' );
 		}
 
-		// If there are any other query parameters left, re-use that uri object.
-		// Otherwise use the canonical style view url (T44553, T102363).
-		keys = Object.keys( uri.query );
+		// Remove parameters which are only intended for the editor, not for read mode
+		url.searchParams.delete( 'editintro' );
+		url.searchParams.delete( 'preload' );
+		url.searchParams.delete( 'preloadparams[]' );
+		url.searchParams.delete( 'preloadtitle' );
+		url.searchParams.delete( 'summary' );
+
+		// If there are any other query parameters left, re-use that URL object.
+		// Otherwise use the canonical style view URL (T44553, T102363).
+		const keys = [];
+		url.searchParams.forEach( ( val, key ) => {
+			keys.push( key );
+		} );
 		if ( !keys.length || ( keys.length === 1 && keys[ 0 ] === 'title' ) ) {
-			history.pushState( this.popState, document.title, this.viewUri );
+			history.pushState( this.popState, '', this.viewUrl );
 		} else {
-			history.pushState( this.popState, document.title, uri );
+			history.pushState( this.popState, '', url );
 		}
 	}
 };
@@ -1306,19 +1168,21 @@ ve.init.mw.DesktopArticleTarget.prototype.restorePage = function () {
  * @param {Event} e Native event object
  */
 ve.init.mw.DesktopArticleTarget.prototype.onWindowPopState = function ( e ) {
-	var veaction, oldUri,
-		target = this;
-
 	if ( !this.verifyPopState( e.state ) ) {
 		// Ignore popstate events fired for states not created by us
 		// This also filters out the initial fire in Chrome (T59901).
 		return;
 	}
 
-	oldUri = this.currentUri;
+	const oldUrl = this.currentUrl;
 
-	this.currentUri = new mw.Uri( location.href );
-	veaction = this.currentUri.query.veaction;
+	this.currentUrl = new URL( location.href );
+	let veaction = this.currentUrl.searchParams.get( 'veaction' );
+	const action = this.currentUrl.searchParams.get( 'action' );
+
+	if ( !veaction && action === 'edit' ) {
+		veaction = this.getDefaultMode() === 'source' ? 'editsource' : 'edit';
+	}
 
 	if ( this.isModeAvailable( 'source' ) && this.active ) {
 		if ( veaction === 'editsource' && this.getDefaultMode() === 'visual' ) {
@@ -1331,37 +1195,30 @@ ve.init.mw.DesktopArticleTarget.prototype.onWindowPopState = function ( e ) {
 	}
 	if ( !this.active && ( veaction === 'edit' || veaction === 'editsource' ) ) {
 		this.actFromPopState = true;
-		this.activate();
+		this.emit( 'reactivate' );
 	}
 	if ( this.active && veaction !== 'edit' && veaction !== 'editsource' ) {
 		this.actFromPopState = true;
 		// "Undo" the pop-state, as the event is not cancellable
-		history.pushState( this.popState, document.title, oldUri );
-		this.currentUri = oldUri;
-		this.tryTeardown( false, 'navigate-back' ).then( function () {
+		history.pushState( this.popState, '', oldUrl );
+		this.currentUrl = oldUrl;
+		this.tryTeardown( false, 'navigate-back' ).then( () => {
 			// Teardown was successful, re-apply the undone state
 			history.back();
-		} ).always( function () {
-			target.actFromPopState = false;
+		} ).always( () => {
+			this.actFromPopState = false;
 		} );
 	}
 };
 
 /**
- * Replace the page content with new HTML.
- *
- * @param {string} html Rendered HTML from server
- * @param {string} categoriesHtml Rendered categories HTML from server
- * @param {string} displayTitle HTML to show as the page title
- * @param {Object} lastModified Object containing user-formatted date
- *  and time strings, or undefined if we made no change.
- * @param {string} contentSub HTML to show as the content subtitle
+ * @inheritdoc
  */
 ve.init.mw.DesktopArticleTarget.prototype.replacePageContent = function (
-	html, categoriesHtml, displayTitle, lastModified, contentSub
+	html, categoriesHtml, displayTitle, lastModified /* , contentSub, sections */
 ) {
-	var $content = $( $.parseHTML( html ) ),
-		$categories;
+	// Parent method
+	ve.init.mw.DesktopArticleTarget.super.prototype.replacePageContent.apply( this, arguments );
 
 	if ( lastModified ) {
 		// If we were not viewing the most recent revision before (a requirement
@@ -1373,6 +1230,7 @@ ve.init.mw.DesktopArticleTarget.prototype.replacePageContent = function (
 		}
 
 		// Intentionally treated as HTML
+		// eslint-disable-next-line no-jquery/no-html
 		$( '#footer-info-lastmod' ).html( ' ' + mw.msg(
 			'lastmodifiedat',
 			lastModified.date,
@@ -1380,19 +1238,7 @@ ve.init.mw.DesktopArticleTarget.prototype.replacePageContent = function (
 		) );
 	}
 
-	this.$editableContent.find( '.mw-parser-output' ).replaceWith( $content );
-	mw.hook( 'wikipage.content' ).fire( this.$editableContent );
-	if ( displayTitle ) {
-		$( '#firstHeading' ).html( displayTitle );
-	}
-
-	$categories = $( $.parseHTML( categoriesHtml ) );
-	mw.hook( 'wikipage.categories' ).fire( $categories );
-	$( '#catlinks' ).replaceWith( $categories );
 	this.$originalCategories = null;
-
-	$( '#contentSub' ).html( contentSub );
-	this.setRealRedirectInterface();
 
 	// Re-set any edit section handlers now that the page content has been replaced
 	mw.libs.ve.setupEditLinks();
@@ -1424,9 +1270,8 @@ ve.init.mw.DesktopArticleTarget.prototype.teardownUnloadHandlers = function () {
  * Show the beta dialog as needed
  */
 ve.init.mw.DesktopArticleTarget.prototype.maybeShowWelcomeDialog = function () {
-	var editorMode = this.getDefaultMode(),
-		windowManager = this.getSurface().dialogs,
-		target = this;
+	const editorMode = this.getDefaultMode(),
+		windowManager = this.getSurface().dialogs;
 
 	this.welcomeDialogPromise = ve.createDeferred();
 
@@ -1440,13 +1285,13 @@ ve.init.mw.DesktopArticleTarget.prototype.maybeShowWelcomeDialog = function () {
 				editor: editorMode
 			}
 		)
-			.closed.then( function ( data ) {
-				target.welcomeDialogPromise.resolve();
-				target.welcomeDialog = null;
+			.closed.then( ( data ) => {
+				this.welcomeDialogPromise.resolve();
+				this.welcomeDialog = null;
 				if ( data && data.action === 'switch-wte' ) {
-					target.switchToWikitextEditor( false );
+					this.switchToWikitextEditor( false );
 				} else if ( data && data.action === 'switch-ve' ) {
-					target.switchToVisualEditor();
+					this.switchToVisualEditor();
 				}
 			} );
 		mw.libs.ve.stopShowingWelcomeDialog();
@@ -1459,32 +1304,28 @@ ve.init.mw.DesktopArticleTarget.prototype.maybeShowWelcomeDialog = function () {
  * Show the meta dialog as needed on load.
  */
 ve.init.mw.DesktopArticleTarget.prototype.maybeShowMetaDialog = function () {
-	var windowAction, redirectMetaItems,
-		target = this;
-
 	if ( this.welcomeDialogPromise ) {
 		// Pop out the notices when the welcome dialog is closed
 		this.welcomeDialogPromise
-			.always( function () {
-				var popup;
+			.always( () => {
 				if (
-					target.switched &&
+					this.switched &&
 					!mw.user.options.get( 'visualeditor-hidevisualswitchpopup' )
 				) {
 					// Show "switched" popup
-					popup = new mw.libs.ve.SwitchPopupWidget( 'visual' );
-					target.actionsToolbar.tools.editModeSource.toolGroup.$element.append( popup.$element );
+					const popup = new mw.libs.ve.SwitchPopupWidget( 'visual' );
+					this.toolbar.tools.editModeSource.toolGroup.$element.append( popup.$element );
 					popup.toggle( true );
-				} else if ( target.actionsToolbar.tools.notices ) {
+				} else if ( this.toolbar.tools.notices ) {
 					// Show notices
-					target.actionsToolbar.tools.notices.getPopup().toggle( true );
+					this.toolbar.tools.notices.getPopup().toggle( true );
 				}
 			} );
 	}
 
-	redirectMetaItems = this.getSurface().getModel().getMetaList().getItemsInGroup( 'mwRedirect' );
+	const redirectMetaItems = this.getSurface().getModel().getDocument().getMetaList().getItemsInGroup( 'mwRedirect' );
 	if ( redirectMetaItems.length ) {
-		windowAction = ve.ui.actionFactory.create( 'window', this.getSurface() );
+		const windowAction = ve.ui.actionFactory.create( 'window', this.getSurface() );
 		windowAction.open( 'meta', { page: 'settings' } );
 	}
 };
@@ -1492,14 +1333,13 @@ ve.init.mw.DesktopArticleTarget.prototype.maybeShowMetaDialog = function () {
 /**
  * Handle before unload event.
  *
- * @return {string} Message
+ * @return {string|undefined} Message
  */
 ve.init.mw.DesktopArticleTarget.prototype.onBeforeUnload = function () {
-	var fallbackResult;
 	// Check if someone already set on onbeforeunload hook
 	if ( this.onBeforeUnloadFallback ) {
 		// Get the result of their onbeforeunload hook
-		fallbackResult = this.onBeforeUnloadFallback();
+		const fallbackResult = this.onBeforeUnloadFallback();
 		// If it returned something, exit here and return their message
 		if ( fallbackResult !== undefined ) {
 			return fallbackResult;
@@ -1523,7 +1363,8 @@ ve.init.mw.DesktopArticleTarget.prototype.onBeforeUnload = function () {
  */
 ve.init.mw.DesktopArticleTarget.prototype.onUnload = function () {
 	if ( !this.submitting ) {
-		ve.track( 'mwedit.abort', {
+		ve.track( 'editAttemptStep', {
+			action: 'abort',
 			type: this.edited ? 'unknown-edited' : 'unknown',
 			mechanism: 'navigate',
 			mode: this.surface ? this.surface.getMode() : this.getDefaultMode()
@@ -1569,36 +1410,46 @@ ve.init.mw.DesktopArticleTarget.prototype.switchToWikitextSection = function () 
  * @inheritdoc
  */
 ve.init.mw.DesktopArticleTarget.prototype.switchToFallbackWikitextEditor = function ( modified ) {
-	var uri, oldId, prefPromise,
-		target = this;
-
-	// Parent method
-	ve.init.mw.DesktopArticleTarget.super.prototype.switchToFallbackWikitextEditor.apply( this, arguments );
-
-	oldId = mw.config.get( 'wgRevisionId' ) || $( 'input[name=parentRevId]' ).val();
-	prefPromise = mw.libs.ve.setEditorPreference( 'wikitext' );
+	const oldId = mw.config.get( 'wgRevisionId' ) || $( 'input[name=parentRevId]' ).val();
+	const prefPromise = mw.libs.ve.setEditorPreference( 'wikitext' );
 
 	if ( !modified ) {
 		ve.track( 'activity.editor-switch', { action: 'source-desktop' } );
-		ve.track( 'mwedit.abort', { type: 'switchnochange', mechanism: 'navigate', mode: 'visual' } );
+		ve.track( 'editAttemptStep', {
+			action: 'abort',
+			type: 'switchnochange',
+			mechanism: 'navigate',
+			mode: 'visual'
+		} );
 		this.submitting = true;
-		prefPromise.done( function () {
-			uri = target.viewUri.clone().extend( {
-				action: 'edit',
-				// No changes, safe to stay in section mode
-				section: target.section !== null ? target.section : undefined,
-				veswitched: 1
-			} );
-			if ( oldId && oldId !== mw.config.get( 'wgCurRevisionId' ) ) {
-				uri.extend( { oldid: oldId } );
+		return prefPromise.then( () => {
+			const url = new URL( this.viewUrl );
+			url.searchParams.set( 'action', 'edit' );
+			// No changes, safe to stay in section mode
+			if ( this.section !== null ) {
+				url.searchParams.set( 'section', this.section );
+			} else {
+				url.searchParams.delete( 'section' );
 			}
-			location.href = uri.toString();
+			url.searchParams.set( 'veswitched', '1' );
+			if ( oldId && oldId !== mw.config.get( 'wgCurRevisionId' ) ) {
+				url.searchParams.set( 'oldid', oldId );
+			}
+			if ( mw.libs.ve.isWelcomeDialogSuppressed() ) {
+				url.searchParams.set( 'vehidebetadialog', '1' );
+			}
+			location.href = url.toString();
 		} );
 	} else {
-		this.serialize( this.getDocToSave() ).then( function ( data ) {
+		return this.serialize( this.getDocToSave() ).then( ( data ) => {
 			ve.track( 'activity.editor-switch', { action: 'source-desktop' } );
-			ve.track( 'mwedit.abort', { type: 'switchwith', mechanism: 'navigate', mode: 'visual' } );
-			target.submitWithSaveFields( { wpDiff: true, wpAutoSummary: '' }, data.content );
+			ve.track( 'editAttemptStep', {
+				action: 'abort',
+				type: 'switchwith',
+				mechanism: 'navigate',
+				mode: 'visual'
+			} );
+			this.submitWithSaveFields( { wpDiff: true, wpAutoSummary: '' }, data.content );
 		} );
 	}
 };
@@ -1607,43 +1458,18 @@ ve.init.mw.DesktopArticleTarget.prototype.switchToFallbackWikitextEditor = funct
  * @inheritdoc
  */
 ve.init.mw.DesktopArticleTarget.prototype.reloadSurface = function () {
-	var target = this;
-
 	this.activating = true;
 	this.activatingDeferred = ve.createDeferred();
 
 	// Parent method
 	ve.init.mw.DesktopArticleTarget.super.prototype.reloadSurface.apply( this, arguments );
 
-	this.activatingDeferred.done( function () {
-		target.updateHistoryState();
-		target.afterActivate();
-		target.setupTriggerListeners();
+	this.activatingDeferred.done( () => {
+		this.updateHistoryState();
+		this.afterActivate();
+		this.setupTriggerListeners();
 	} );
 	this.toolbarSetupDeferred.resolve();
-};
-
-/**
- * Set temporary redirect interface to match the current state of redirection in the editor.
- *
- * @param {string|null} title Current redirect target, or null if none
- */
-ve.init.mw.DesktopArticleTarget.prototype.setFakeRedirectInterface = function ( title ) {
-	this.updateRedirectInterface(
-		title ? this.constructor.static.buildRedirectSub() : $(),
-		title ? this.constructor.static.buildRedirectMsg( title ) : $()
-	);
-};
-
-/**
- * Set the redirect interface to match the page's redirect state.
- */
-ve.init.mw.DesktopArticleTarget.prototype.setRealRedirectInterface = function () {
-	this.updateRedirectInterface(
-		mw.config.get( 'wgIsRedirect' ) ? this.constructor.static.buildRedirectSub() : $(),
-		// Remove our custom content header - the original one in #mw-content-text will be shown
-		$()
-	);
 };
 
 /* Registration */

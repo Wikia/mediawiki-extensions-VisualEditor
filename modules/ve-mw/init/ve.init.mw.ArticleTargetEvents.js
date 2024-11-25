@@ -1,7 +1,7 @@
 /*!
  * VisualEditor MediaWiki Initialization class.
  *
- * @copyright 2011-2020 VisualEditor Team and others; see AUTHORS.txt
+ * @copyright See AUTHORS.txt
  * @license The MIT License (MIT); see LICENSE.txt
  */
 
@@ -23,18 +23,7 @@ ve.init.mw.ArticleTargetEvents = function VeInitMwArticleTargetEvents( target ) 
 		saveInitiated: 'onSaveInitiated',
 		save: 'onSaveComplete',
 		saveReview: 'onSaveReview',
-		saveErrorEmpty: [ 'trackSaveError', 'empty' ],
-		saveErrorSpamBlacklist: [ 'trackSaveError', 'spamblacklist' ],
-		saveErrorAbuseFilter: [ 'trackSaveError', 'abusefilter' ],
-		saveErrorBadToken: [ 'trackSaveError', 'badtoken' ],
-		saveErrorNewUser: [ 'trackSaveError', 'newuser' ],
-		saveErrorPageDeleted: [ 'trackSaveError', 'pagedeleted' ],
-		saveErrorHookAborted: [ 'trackSaveError', 'responseUnknown' ], // FIXME: Make a specific one.
-		saveErrorTitleBlacklist: [ 'trackSaveError', 'titleblacklist' ],
-		saveErrorCaptcha: [ 'trackSaveError', 'captcha' ],
-		saveErrorReadOnly: [ 'trackSaveError', 'unknown', 'readonly' ],
-		saveErrorUnknown: [ 'trackSaveError', 'unknown' ],
-		editConflict: [ 'trackSaveError', 'editconflict' ],
+		saveError: 'trackSaveError',
 		surfaceReady: 'onSurfaceReady',
 		showChanges: 'onShowChanges',
 		showChangesError: 'onShowChangesError',
@@ -51,36 +40,41 @@ ve.init.mw.ArticleTargetEvents = function VeInitMwArticleTargetEvents( target ) 
  * @param {Object} data Additional data describing the event, encoded as an object
  */
 ve.init.mw.ArticleTargetEvents.prototype.track = function ( topic, data ) {
-	ve.track( topic, $.extend( {
+	ve.track( topic, ve.extendObject( {
 		mode: this.target.surface ? this.target.surface.getMode() : this.target.getDefaultMode()
 	}, data ) );
 };
 
 /**
- * Target specific ve.track wrapper, focused on mwtiming
+ * Target specific ve.track wrapper, focused on timing
  *
  * @param {string} topic Event name
  * @param {Object} data Additional data describing the event, encoded as an object
  */
 ve.init.mw.ArticleTargetEvents.prototype.trackTiming = function ( topic, data ) {
-	data.targetName = this.target.constructor.static.trackingName;
-	this.track( 'mwtiming.' + topic, data );
-
 	if ( topic.indexOf( 'performance.system.serializeforcache' ) === 0 ) {
 		// HACK: track serializeForCache duration here, because there's no event for that
 		this.timings.serializeForCache = data.duration;
 	}
+
+	// Add type for save errors; not in the topic for stupid historical reasons
+	if ( topic === 'performance.user.saveError' ) {
+		topic = topic + '.' + data.type;
+	}
+
+	topic = 'timing.ve.' + this.target.constructor.static.trackingName + '.' + topic;
+
+	mw.track( topic, data.duration );
 };
 
 /**
  * Track when the user makes their first transaction
  */
 ve.init.mw.ArticleTargetEvents.prototype.onFirstTransaction = function () {
-	this.track( 'mwedit.firstChange' );
+	this.track( 'editAttemptStep', { action: 'firstChange' } );
 
 	this.trackTiming( 'behavior.firstTransaction', {
-		duration: ve.now() - this.timings.surfaceReady,
-		mode: this.target.surface.getMode()
+		duration: ve.now() - this.timings.surfaceReady
 	} );
 };
 
@@ -92,7 +86,7 @@ ve.init.mw.ArticleTargetEvents.prototype.onSaveWorkflowBegin = function () {
 	this.trackTiming( 'behavior.lastTransactionTillSaveDialogOpen', {
 		duration: this.timings.saveWorkflowBegin - this.timings.lastTransaction
 	} );
-	this.track( 'mwedit.saveIntent' );
+	this.track( 'editAttemptStep', { action: 'saveIntent' } );
 };
 
 /**
@@ -112,7 +106,7 @@ ve.init.mw.ArticleTargetEvents.prototype.onSaveInitiated = function () {
 	this.trackTiming( 'behavior.saveDialogOpenTillSave', {
 		duration: this.timings.saveInitiated - this.timings.saveWorkflowBegin
 	} );
-	this.track( 'mwedit.saveAttempt' );
+	this.track( 'editAttemptStep', { action: 'saveAttempt' } );
 };
 
 /**
@@ -123,7 +117,8 @@ ve.init.mw.ArticleTargetEvents.prototype.onSaveInitiated = function () {
 ve.init.mw.ArticleTargetEvents.prototype.onSaveComplete = function ( data ) {
 	this.trackTiming( 'performance.user.saveComplete', { duration: ve.now() - this.timings.saveInitiated } );
 	this.timings.saveRetries = 0;
-	this.track( 'mwedit.saveSuccess', {
+	this.track( 'editAttemptStep', {
+		action: 'saveSuccess',
 		timing: ve.now() - this.timings.saveInitiated + ( this.timings.serializeForCache || 0 ),
 		// eslint-disable-next-line camelcase
 		revision_id: data.newrevid
@@ -133,50 +128,42 @@ ve.init.mw.ArticleTargetEvents.prototype.onSaveComplete = function ( data ) {
 /**
  * Track a save error by type
  *
- * @param {string} type Text for error type
+ * @param {string} code Error code
  */
-ve.init.mw.ArticleTargetEvents.prototype.trackSaveError = function ( type ) {
-	var key, data,
-		failureArguments = [],
-		// Maps mwtiming types to mwedit types
-		typeMap = {
+ve.init.mw.ArticleTargetEvents.prototype.trackSaveError = function ( code ) {
+	// Maps error codes to editAttemptStep types
+	const typeMap = {
 			badtoken: 'userBadToken',
-			newuser: 'userNewUser',
-			abusefilter: 'extensionAbuseFilter',
+			assertanonfailed: 'userNewUser',
+			assertuserfailed: 'userNewUser',
+			assertnameduserfailed: 'userNewUser',
+			'abusefilter-disallowed': 'extensionAbuseFilter',
+			'abusefilter-warning': 'extensionAbuseFilter',
 			captcha: 'extensionCaptcha',
 			spamblacklist: 'extensionSpamBlacklist',
-			empty: 'responseEmpty',
-			unknown: 'responseUnknown',
+			'titleblacklist-forbidden': 'extensionTitleBlacklist',
 			pagedeleted: 'editPageDeleted',
-			titleblacklist: 'extensionTitleBlacklist',
 			editconflict: 'editConflict'
 		},
-		// Types that are logged as performance.user.saveError.{type}
+		// Types that are logged as performance.user.saveError.{code}
 		// (for historical reasons; this sucks)
 		specialTypes = [ 'editconflict' ];
 
-	if ( arguments ) {
-		failureArguments = Array.prototype.slice.call( arguments, 1 );
-	}
-
-	key = 'performance.user.saveError';
-	if ( specialTypes.indexOf( type ) !== -1 ) {
-		key += '.' + type;
+	let key = 'performance.user.saveError';
+	if ( specialTypes.indexOf( code ) !== -1 ) {
+		key += '.' + code;
 	}
 	this.trackTiming( key, {
 		duration: ve.now() - this.timings.saveInitiated,
-		retries: this.timings.saveRetries,
-		type: type
+		type: code
 	} );
 
-	data = {
-		type: typeMap[ type ] || 'responseUnknown',
+	this.track( 'editAttemptStep', {
+		action: 'saveFailure',
+		message: code,
+		type: typeMap[ code ] || 'responseUnknown',
 		timing: ve.now() - this.timings.saveInitiated + ( this.timings.serializeForCache || 0 )
-	};
-	if ( type === 'unknown' && failureArguments[ 0 ] ) {
-		data.message = failureArguments[ 0 ];
-	}
-	this.track( 'mwedit.saveFailure', data );
+	} );
 };
 
 /**

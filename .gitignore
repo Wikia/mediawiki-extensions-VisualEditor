@@ -8,6 +8,7 @@ sublime-*
 \#*#
 .#*
 /.idea
+.vscode
 
 # Install and build artifacts
 /docs
@@ -16,6 +17,8 @@ composer.lock
 vendor
 screenshots/*.png
 .eslintcache
+tests/selenium/log
+.api-testing.config.json
 
 # OS
 .DS_Store

@@ -1,7 +1,7 @@
 /*!
  * VisualEditor UserInterface MWCategoryItemWidget class.
  *
- * @copyright 2011-2020 VisualEditor Team and others; see AUTHORS.txt
+ * @copyright See AUTHORS.txt
  * @license The MIT License (MIT); see LICENSE.txt
  */
 
@@ -11,14 +11,18 @@
  * @class
  * @abstract
  * @extends OO.ui.ButtonWidget
- * @mixins OO.ui.mixin.DraggableElement
+ * @mixes OO.ui.mixin.DraggableElement
  *
  * @constructor
- * @param {Object} [config] Configuration options
- * @cfg {Object} [item] Category item
- * @cfg {boolean} [hidden] Whether the category is hidden or not
- * @cfg {boolean} [missing] Whether the category's description page is missing
- * @cfg {string} [redirectTo] The name of the category this category's page redirects to.
+ * @param {Object} config
+ * @param {Object} config.item Category item
+ * @param {string} config.item.name Category name
+ * @param {string} config.item.value
+ * @param {string} [config.item.sortKey='']
+ * @param {ve.dm.MWCategoryMetaItem} config.item.metaItem
+ * @param {boolean} [config.hidden] Whether the category is hidden or not
+ * @param {boolean} [config.missing] Whether the category's description page is missing
+ * @param {string} [config.redirectTo] The name of the category this category's page redirects to.
  */
 ve.ui.MWCategoryItemWidget = function VeUiMWCategoryItemWidget( config ) {
 	// Config initialization
@@ -64,7 +68,7 @@ OO.mixinClass( ve.ui.MWCategoryItemWidget, OO.ui.mixin.DraggableElement );
 /* Events */
 
 /**
- * @event togglePopupMenu
+ * @event ve.ui.MWCategoryItemWidget#togglePopupMenu
  * @param {ve.ui.MWCategoryItemWidget} item Item to load into popup
  */
 
@@ -73,7 +77,7 @@ OO.mixinClass( ve.ui.MWCategoryItemWidget, OO.ui.mixin.DraggableElement );
 /**
  * Handle button widget click events.
  *
- * @fires togglePopupMenu on click.
+ * @fires ve.ui.MWCategoryItemWidget#togglePopupMenu
  */
 ve.ui.MWCategoryItemWidget.prototype.onButtonClick = function () {
 	this.emit( 'togglePopupMenu', this );

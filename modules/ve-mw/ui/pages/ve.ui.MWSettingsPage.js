@@ -1,7 +1,7 @@
 /*!
  * VisualEditor user interface MWSettingsPage class.
  *
- * @copyright 2011-2020 VisualEditor Team and others; see AUTHORS.txt
+ * @copyright See AUTHORS.txt
  * @license The MIT License (MIT); see LICENSE.txt
  */
 
@@ -14,16 +14,14 @@
  * @constructor
  * @param {string} name Unique symbolic name of page
  * @param {Object} [config] Configuration options
- * @cfg {jQuery} [$overlay] Overlay to render dropdowns in
+ * @param {jQuery} [config.$overlay] Overlay to render dropdowns in
  */
 ve.ui.MWSettingsPage = function VeUiMWSettingsPage( name, config ) {
-	var settingsPage = this;
-
 	// Parent constructor
 	ve.ui.MWSettingsPage.super.apply( this, arguments );
 
 	// Properties
-	this.metaList = null;
+	this.fragment = null;
 	this.tocOptionTouched = false;
 	this.redirectOptionsTouched = false;
 	this.tableOfContentsTouched = false;
@@ -108,8 +106,9 @@ ve.ui.MWSettingsPage = function VeUiMWSettingsPage( name, config ) {
 			label: ve.msg( 'visualeditor-dialog-meta-settings-noeditsection-label' ),
 			help: ve.msg( 'visualeditor-dialog-meta-settings-noeditsection-help' ),
 			classes: [ 've-test-page-settings-noeditsection' ]
-		}
-	].concat( ve.ui.MWSettingsPage.static.extraMetaCheckboxes );
+		},
+		...ve.ui.MWSettingsPage.static.extraMetaCheckboxes
+	];
 
 	if ( mw.config.get( 'wgNamespaceNumber' ) === mw.config.get( 'wgNamespaceIds' ).category ) {
 		this.metaItemCheckboxes.push(
@@ -133,7 +132,7 @@ ve.ui.MWSettingsPage = function VeUiMWSettingsPage( name, config ) {
 		this.tableOfContents
 	] );
 
-	this.metaItemCheckboxes.forEach( function ( metaItemCheckbox ) {
+	this.metaItemCheckboxes.forEach( ( metaItemCheckbox ) => {
 		metaItemCheckbox.fieldLayout = new OO.ui.FieldLayout(
 			new OO.ui.CheckboxInputWidget(),
 			// See above for classes
@@ -146,7 +145,7 @@ ve.ui.MWSettingsPage = function VeUiMWSettingsPage( name, config ) {
 				help: metaItemCheckbox.help || ''
 			}
 		);
-		settingsPage.settingsFieldset.addItems( [ metaItemCheckbox.fieldLayout ] );
+		this.settingsFieldset.addItems( [ metaItemCheckbox.fieldLayout ] );
 	} );
 
 	this.$element.append( this.settingsFieldset.$element );
@@ -176,15 +175,10 @@ ve.ui.MWSettingsPage.static.addMetaCheckbox = function ( metaName, label ) {
 /**
  * @inheritdoc
  */
-ve.ui.MWSettingsPage.prototype.setOutlineItem = function () {
-	// Parent method
-	ve.ui.MWSettingsPage.super.prototype.setOutlineItem.apply( this, arguments );
-
-	if ( this.outlineItem ) {
-		this.outlineItem
-			.setIcon( 'pageSettings' )
-			.setLabel( ve.msg( 'visualeditor-dialog-meta-settings-section' ) );
-	}
+ve.ui.MWSettingsPage.prototype.setupOutlineItem = function () {
+	this.outlineItem
+		.setIcon( 'pageSettings' )
+		.setLabel( ve.msg( 'visualeditor-dialog-meta-settings-section' ) );
 };
 
 /**
@@ -202,7 +196,6 @@ ve.ui.MWSettingsPage.prototype.onTableOfContentsFieldChange = function () {
  * @param {boolean} value Whether a redirect is to be set for this page
  */
 ve.ui.MWSettingsPage.prototype.onEnableRedirectChange = function ( value ) {
-	var page = this;
 	this.redirectTargetInput.setDisabled( !value );
 	this.enableStaticRedirectInput.setDisabled( !value );
 	if ( value ) {
@@ -217,8 +210,8 @@ ve.ui.MWSettingsPage.prototype.onEnableRedirectChange = function ( value ) {
 		 * OO.ui.LookupElement#onLookupInputFocus/OO.ui.LookupElement#populateLookupMenu.
 		 * https://phabricator.wikimedia.org/T137309
 		 */
-		setTimeout( function () {
-			page.redirectTargetInput.focus();
+		setTimeout( () => {
+			this.redirectTargetInput.focus();
 		} );
 	} else {
 		this.redirectTargetInput.setValue( '' );
@@ -231,18 +224,16 @@ ve.ui.MWSettingsPage.prototype.onEnableRedirectChange = function ( value ) {
  * @return {boolean} Whether redirect link is valid.
  */
 ve.ui.MWSettingsPage.prototype.checkValidRedirect = function () {
-	var title;
 	if ( this.enableRedirectInput.isSelected() ) {
-		title = this.redirectTargetInput.getValue();
+		const title = this.redirectTargetInput.getValue();
 
 		if ( !mw.Title.newFromText( title ) ) {
-
 			/*
 			 * TODO more precise error message. Modify the Title.newFromText method in Title.js
 			 * my idea is to in the parse method instead of a boolean return a string with an error message (not an error code since the error string can have parameters),
 			 * then in Title.newFromText instead of returning null, return the error string. Use that string there in setErrors.
 			 * Problem: some methods might depend on it returning null.
-			 * Solution: either make it a new metohd (Title.newFromTextThrow), or add a an optional parameter to return the error message.
+			 * Solution: either make it a new method (Title.newFromTextThrow), or add a an optional parameter to return the error message.
 			 */
 			this.redirectTargetField.setErrors( [ mw.msg( 'visualeditor-title-error' ) ] );
 			return false;
@@ -278,38 +269,34 @@ ve.ui.MWSettingsPage.prototype.onEnableStaticRedirectChange = function () {
  * @return {Object|null} Meta item, if any
  */
 ve.ui.MWSettingsPage.prototype.getMetaItem = function ( name ) {
-	return this.metaList.getItemsInGroup( name )[ 0 ] || null;
+	return this.fragment.getDocument().getMetaList().getItemsInGroup( name )[ 0 ] || null;
 };
 
 /**
  * Setup settings page.
  *
- * @param {ve.dm.MetaList} metaList Meta list
- * @param {Object} [config] Configuration options
+ * @param {ve.dm.SurfaceFragment} fragment Surface fragment
+ * @param {Object} config
  * @param {Object} [config.data] Dialog setup data
- * @param {boolean} [config.isReadOnly] Dialog is in read-only mode
+ * @param {boolean} [config.isReadOnly=false] Dialog is in read-only mode
  * @return {jQuery.Promise}
  */
-ve.ui.MWSettingsPage.prototype.setup = function ( metaList, config ) {
-	var tableOfContentsMetaItem, tableOfContentsField, tableOfContentsMode,
-		redirectTargetItem, redirectTarget, redirectStatic,
-		settingsPage = this;
-
-	this.metaList = metaList;
+ve.ui.MWSettingsPage.prototype.setup = function ( fragment, config ) {
+	this.fragment = fragment;
 
 	// Table of Contents items
-	tableOfContentsField = this.tableOfContents.getField();
-	tableOfContentsMetaItem = this.getMetaItem( 'mwTOC' );
-	tableOfContentsMode = tableOfContentsMetaItem && tableOfContentsMetaItem.getAttribute( 'property' ) || 'default';
+	const tableOfContentsField = this.tableOfContents.getField();
+	const tableOfContentsMetaItem = this.getMetaItem( 'mwTOC' );
+	const tableOfContentsMode = tableOfContentsMetaItem && tableOfContentsMetaItem.getAttribute( 'property' ) || 'default';
 	tableOfContentsField
 		.selectItemByData( tableOfContentsMode )
 		.setDisabled( config.isReadOnly );
 	this.tableOfContentsTouched = false;
 
 	// Redirect items (disabled states set by change event)
-	redirectTargetItem = this.getMetaItem( 'mwRedirect' );
-	redirectTarget = redirectTargetItem && redirectTargetItem.getAttribute( 'title' ) || '';
-	redirectStatic = this.getMetaItem( 'mwStaticRedirect' );
+	const redirectTargetItem = this.getMetaItem( 'mwRedirect' );
+	const redirectTarget = redirectTargetItem && redirectTargetItem.getAttribute( 'title' ) || '';
+	const redirectStatic = this.getMetaItem( 'mwStaticRedirect' );
 	this.enableRedirectInput
 		.setSelected( !!redirectTargetItem )
 		.setDisabled( config.isReadOnly );
@@ -323,8 +310,8 @@ ve.ui.MWSettingsPage.prototype.setup = function ( metaList, config ) {
 	this.redirectOptionsTouched = false;
 
 	// Simple checkbox items
-	this.metaItemCheckboxes.forEach( function ( metaItemCheckbox ) {
-		var isSelected = !!settingsPage.getMetaItem( metaItemCheckbox.metaName );
+	this.metaItemCheckboxes.forEach( ( metaItemCheckbox ) => {
+		const isSelected = !!this.getMetaItem( metaItemCheckbox.metaName );
 		metaItemCheckbox.fieldLayout.getField()
 			.setSelected( isSelected )
 			.setDisabled( config.isReadOnly );
@@ -339,11 +326,6 @@ ve.ui.MWSettingsPage.prototype.setup = function ( metaList, config ) {
  * @param {Object} [data] Dialog tear down data
  */
 ve.ui.MWSettingsPage.prototype.teardown = function ( data ) {
-	var currentTableOfContents, newTableOfContentsData, newTableOfContentsItem,
-		currentRedirectTargetItem, newRedirectData, newRedirectItemData,
-		currentStaticRedirectItem, newStaticRedirectState,
-		settingsPage = this;
-
 	// Data initialisation
 	data = data || {};
 	if ( data.action !== 'done' ) {
@@ -351,30 +333,31 @@ ve.ui.MWSettingsPage.prototype.teardown = function ( data ) {
 	}
 
 	// Table of Contents items
-	currentTableOfContents = this.getMetaItem( 'mwTOC' );
-	newTableOfContentsData = this.tableOfContents.getField().findSelectedItem();
+	const currentTableOfContents = this.getMetaItem( 'mwTOC' );
+	const newTableOfContentsData = this.tableOfContents.getField().findSelectedItem();
 
 	// Redirect items
-	currentRedirectTargetItem = this.getMetaItem( 'mwRedirect' );
-	newRedirectData = this.redirectTargetInput.getValue();
-	newRedirectItemData = { type: 'mwRedirect', attributes: { title: newRedirectData } };
+	const currentRedirectTargetItem = this.getMetaItem( 'mwRedirect' );
+	const newRedirectData = this.redirectTargetInput.getValue();
+	const newRedirectItemData = { type: 'mwRedirect', attributes: { title: newRedirectData } };
 
-	currentStaticRedirectItem = this.getMetaItem( 'mwStaticRedirect' );
-	newStaticRedirectState = this.enableStaticRedirectInput.isSelected();
+	const currentStaticRedirectItem = this.getMetaItem( 'mwStaticRedirect' );
+	const newStaticRedirectState = this.enableStaticRedirectInput.isSelected();
 
 	// Alter the TOC option flag iff it's been touched & is actually different
 	if ( this.tableOfContentsTouched ) {
 		if ( newTableOfContentsData.data === 'default' ) {
 			if ( currentTableOfContents ) {
-				currentTableOfContents.remove();
+				this.fragment.removeMeta( currentTableOfContents );
 			}
 		} else {
-			newTableOfContentsItem = { type: 'mwTOC', attributes: { property: newTableOfContentsData.data } };
+			const newTableOfContentsItem = { type: 'mwTOC', attributes: { property: newTableOfContentsData.data } };
 
 			if ( !currentTableOfContents ) {
-				this.metaList.insertMeta( newTableOfContentsItem );
+				this.fragment.insertMeta( newTableOfContentsItem );
 			} else if ( currentTableOfContents.getAttribute( 'property' ) !== newTableOfContentsData.data ) {
-				currentTableOfContents.replaceWith(
+				this.fragment.replaceMeta(
+					currentTableOfContents,
 					ve.extendObject( true, {}, currentTableOfContents.getElement(), newTableOfContentsItem )
 				);
 			}
@@ -387,7 +370,8 @@ ve.ui.MWSettingsPage.prototype.teardown = function ( data ) {
 			if ( newRedirectData ) {
 				if ( currentRedirectTargetItem.getAttribute( 'title' ) !== newRedirectData ) {
 					// There was a redirect and is a new one, but they differ, so replace
-					currentRedirectTargetItem.replaceWith(
+					this.fragment.replaceMeta(
+						currentRedirectTargetItem,
 						ve.extendObject( true, {},
 							currentRedirectTargetItem.getElement(),
 							newRedirectItemData
@@ -396,36 +380,36 @@ ve.ui.MWSettingsPage.prototype.teardown = function ( data ) {
 				}
 			} else {
 				// There was a redirect and is no new one, so remove
-				currentRedirectTargetItem.remove();
+				this.fragment.removeMeta( currentRedirectTargetItem );
 			}
 		} else {
 			if ( newRedirectData ) {
 				// There's no existing redirect but there is a new one, so create
 				// HACK: Putting this at position 0 so that it works – T63862
-				this.metaList.insertMeta( newRedirectItemData, 0 );
+				this.fragment.insertMeta( newRedirectItemData, 0 );
 			}
 		}
 
 		if ( currentStaticRedirectItem && ( !newStaticRedirectState || !newRedirectData ) ) {
-			currentStaticRedirectItem.remove();
+			this.fragment.removeMeta( currentStaticRedirectItem );
 		}
 		if ( !currentStaticRedirectItem && newStaticRedirectState && newRedirectData ) {
-			this.metaList.insertMeta( { type: 'mwStaticRedirect' } );
+			this.fragment.insertMeta( { type: 'mwStaticRedirect' } );
 		}
 	}
 
-	this.metaItemCheckboxes.forEach( function ( metaItemCheckbox ) {
-		var currentItem = settingsPage.getMetaItem( metaItemCheckbox.metaName ),
+	this.metaItemCheckboxes.forEach( ( metaItemCheckbox ) => {
+		const currentItem = this.getMetaItem( metaItemCheckbox.metaName ),
 			isSelected = metaItemCheckbox.fieldLayout.getField().isSelected();
 
 		if ( currentItem && !isSelected ) {
-			currentItem.remove();
+			this.fragment.removeMeta( currentItem );
 		} else if ( !currentItem && isSelected ) {
-			settingsPage.metaList.insertMeta( { type: metaItemCheckbox.metaName } );
+			this.fragment.insertMeta( { type: metaItemCheckbox.metaName } );
 		}
 	} );
 
-	this.metaList = null;
+	this.fragment = null;
 };
 
 ve.ui.MWSettingsPage.prototype.getFieldsets = function () {

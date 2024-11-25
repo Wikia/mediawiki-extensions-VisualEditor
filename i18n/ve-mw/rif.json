@@ -1,8 +1,11 @@
 {
 	"@metadata": {
 		"authors": [
-			"Amara-Amaziɣ"
+			"AjellidnArif",
+			"Amara-Amaziɣ",
+			"Syphax Amaynu"
 		]
 	},
-	"tooltip-ca-ve-edit": "ⵙⵏⴼⵍ ⵜⴰⵙⵏⴰ ⴰ"
+	"tooltip-ca-ve-edit": "Beddeř tasna-ya",
+	"visualeditor-ca-editsource-section": "Beddeř aɣbař"
 }

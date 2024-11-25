@@ -1,7 +1,7 @@
 /*!
  * VisualEditor UserInterface MWTargetWidget class.
  *
- * @copyright 2011-2020 VisualEditor Team and others; see AUTHORS.txt
+ * @copyright See AUTHORS.txt
  * @license The MIT License (MIT); see LICENSE.txt
  */
 
@@ -13,9 +13,12 @@
  * @extends ve.ui.TargetWidget
  *
  * @constructor
- * @param {Object} [config] Configuration options
+ * @param {Object} config
+ * @param {string[]} [config.surfaceClasses] Surface classes to apply
  */
-ve.ui.MWTargetWidget = function VeUiMWTargetWidget() {
+ve.ui.MWTargetWidget = function VeUiMWTargetWidget( config ) {
+	this.surfaceClasses = ve.copy( config.surfaceClasses ) || [];
+
 	// Parent constructor
 	ve.ui.MWTargetWidget.super.apply( this, arguments );
 
@@ -34,20 +37,8 @@ ve.ui.MWTargetWidget.prototype.createTarget = function () {
 	return new ve.init.mw.Target( {
 		register: false,
 		toolbarGroups: this.toolbarGroups,
-		inTargetWidget: true,
 		modes: this.modes,
-		defaultMode: this.defaultMode
+		defaultMode: this.defaultMode,
+		surfaceClasses: this.surfaceClasses
 	} );
-};
-
-/**
- * @inheritdoc
- */
-ve.ui.MWTargetWidget.prototype.setDocument = function () {
-	// Parent method
-	ve.ui.MWTargetWidget.super.prototype.setDocument.apply( this, arguments );
-
-	// Add MW specific classes to the surface
-	this.getSurface().getView().$element.addClass( 'mw-body-content' );
-	this.getSurface().$placeholder.addClass( 'mw-body-content' );
 };

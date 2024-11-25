@@ -1,7 +1,7 @@
 /*!
  * VisualEditor UserInterface MWAlienExtensionInspector class.
  *
- * @copyright 2011-2020 VisualEditor Team and others; see AUTHORS.txt
+ * @copyright See AUTHORS.txt
  * @license The MIT License (MIT); see LICENSE.txt
  */
 
@@ -56,18 +56,17 @@ ve.ui.MWAlienExtensionInspector.prototype.initialize = function () {
  */
 ve.ui.MWAlienExtensionInspector.prototype.getSetupProcess = function ( data ) {
 	return ve.ui.MWAlienExtensionInspector.super.prototype.getSetupProcess.call( this, data )
-		.next( function () {
-			var key, attributeInput, field,
-				attributes = this.selectedNode.getAttribute( 'mw' ).attrs;
+		.next( () => {
+			const attributes = this.selectedNode.getAttribute( 'mw' ).attrs;
 
 			if ( attributes && !ve.isEmptyObject( attributes ) ) {
-				for ( key in attributes ) {
-					attributeInput = new OO.ui.TextInputWidget( {
+				for ( const key in attributes ) {
+					const attributeInput = new OO.ui.TextInputWidget( {
 						value: attributes[ key ]
 					} );
 					attributeInput.connect( this, { change: 'onChangeHandler' } );
 					this.attributeInputs[ key ] = attributeInput;
-					field = new OO.ui.FieldLayout(
+					const field = new OO.ui.FieldLayout(
 						attributeInput,
 						{
 							align: 'left',
@@ -79,7 +78,7 @@ ve.ui.MWAlienExtensionInspector.prototype.getSetupProcess = function ( data ) {
 			}
 
 			this.title.setLabel( this.selectedNode.getExtensionName() );
-		}, this );
+		} );
 };
 
 /**
@@ -87,25 +86,23 @@ ve.ui.MWAlienExtensionInspector.prototype.getSetupProcess = function ( data ) {
  */
 ve.ui.MWAlienExtensionInspector.prototype.getTeardownProcess = function ( data ) {
 	return ve.ui.MWAlienExtensionInspector.super.prototype.getTeardownProcess.call( this, data )
-		.next( function () {
+		.next( () => {
 			this.$attributes.empty();
 			this.attributeInputs = {};
-		}, this );
+		} );
 };
 
 /**
  * @inheritdoc ve.ui.MWExtensionWindow
  */
 ve.ui.MWAlienExtensionInspector.prototype.updateMwData = function ( mwData ) {
-	var key;
-
 	// Parent method
 	ve.ui.MWAlienExtensionInspector.super.prototype.updateMwData.call( this, mwData );
 
 	if ( !ve.isEmptyObject( this.attributeInputs ) ) {
 		// Make sure we have an attrs object to populate
 		mwData.attrs = mwData.attrs || {};
-		for ( key in this.attributeInputs ) {
+		for ( const key in this.attributeInputs ) {
 			mwData.attrs[ key ] = this.attributeInputs[ key ].getValue();
 		}
 	}

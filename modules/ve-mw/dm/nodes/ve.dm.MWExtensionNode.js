@@ -1,7 +1,7 @@
 /*!
  * VisualEditor DataModel MWExtensionNode class.
  *
- * @copyright 2011-2020 VisualEditor Team and others; see AUTHORS.txt
+ * @copyright See AUTHORS.txt
  * @license The MIT License (MIT); see LICENSE.txt
  */
 
@@ -11,8 +11,8 @@
  * @class
  * @abstract
  * @extends ve.dm.LeafNode
- * @mixins ve.dm.FocusableNode
- * @mixins ve.dm.GeneratedContentNode
+ * @mixes ve.dm.FocusableNode
+ * @mixes ve.dm.GeneratedContentNode
  *
  * @constructor
  */
@@ -49,7 +49,7 @@ ve.dm.MWExtensionNode.static.childNodeTypes = [];
 ve.dm.MWExtensionNode.static.tagName = null;
 
 /**
- * Name of the extension and the parser tag name.
+ * Name of the MediaWiki parser extension tag. (Not related to the name of the MediaWiki extension.)
  *
  * @static
  * @property {string}
@@ -68,11 +68,10 @@ ve.dm.MWExtensionNode.static.getMatchRdfaTypes = function () {
  * @param {string} [type] Type to give dataElement, defaults to static.name
  */
 ve.dm.MWExtensionNode.static.toDataElement = function ( domElements, converter, type ) {
-	var dataElement,
-		mwDataJSON = domElements[ 0 ].getAttribute( 'data-mw' ),
+	const mwDataJSON = domElements[ 0 ].getAttribute( 'data-mw' ),
 		mwData = mwDataJSON ? JSON.parse( mwDataJSON ) : {};
 
-	dataElement = {
+	const dataElement = {
 		type: type || this.name,
 		attributes: {
 			mw: mwData,
@@ -91,16 +90,15 @@ ve.dm.MWExtensionNode.static.toDataElement = function ( domElements, converter, 
  */
 ve.dm.MWExtensionNode.static.cloneElement = function () {
 	// Parent method
-	var clone = ve.dm.MWExtensionNode.super.static.cloneElement.apply( this, arguments );
+	const clone = ve.dm.MWExtensionNode.super.static.cloneElement.apply( this, arguments );
 	delete clone.attributes.originalMw;
 	return clone;
 };
 
 ve.dm.MWExtensionNode.static.toDomElements = function ( dataElement, doc, converter ) {
-	var el, els, value,
-		store = converter.getStore(),
-		originalMw = dataElement.attributes.originalMw;
+	const originalMw = dataElement.attributes.originalMw;
 
+	let els;
 	// If the transclusion is unchanged just send back the
 	// original DOM elements so selser can skip over it
 	if (
@@ -110,6 +108,8 @@ ve.dm.MWExtensionNode.static.toDomElements = function ( dataElement, doc, conver
 		// originalDomElements is also used for CE rendering so return a copy
 		els = ve.copyDomElements( converter.getStore().value( dataElement.originalDomElementsHash ), doc );
 	} else {
+		const store = converter.getStore();
+		let value;
 		if (
 			converter.doesModeNeedRendering() &&
 			// Use getHashObjectForRendering to get the rendering from the store
@@ -119,7 +119,7 @@ ve.dm.MWExtensionNode.static.toDomElements = function ( dataElement, doc, conver
 			// meaningful to paste into external applications
 			els = ve.copyDomElements( value, doc );
 		} else {
-			el = doc.createElement( this.tagName );
+			const el = doc.createElement( this.tagName );
 			el.setAttribute( 'typeof', 'mw:Extension/' + this.getExtensionName( dataElement ) );
 			el.setAttribute( 'data-mw', JSON.stringify( dataElement.attributes.mw ) );
 			els = [ el ];
@@ -136,7 +136,7 @@ ve.dm.MWExtensionNode.static.getHashObject = function ( dataElement ) {
 };
 
 /**
- * Get the extension's name
+ * Get name of the MediaWiki parser extension tag.
  *
  * Static version for toDomElements
  *
@@ -149,14 +149,13 @@ ve.dm.MWExtensionNode.static.getExtensionName = function () {
 };
 
 ve.dm.MWExtensionNode.static.describeChanges = function ( attributeChanges, attributes, element ) {
-	var tools, change,
-		descriptions = [],
+	const descriptions = [],
 		fromBody = attributeChanges.mw.from.body,
 		toBody = attributeChanges.mw.to.body;
 
 	if ( attributeChanges.mw ) {
 		// HACK: Try to generate an '<Extension> has changed' message using the associated tool's title
-		tools = ve.ui.toolFactory.getRelatedItems( [ ve.dm.nodeFactory.createFromElement( element ) ] );
+		const tools = ve.ui.toolFactory.getRelatedItems( [ ve.dm.nodeFactory.createFromElement( element ) ] );
 		if ( tools.length ) {
 			descriptions.push( ve.msg( 'visualeditor-changedesc-unknown',
 				OO.ui.resolveMsg( ve.ui.toolFactory.lookup( tools[ 0 ].name ).static.title )
@@ -164,7 +163,7 @@ ve.dm.MWExtensionNode.static.describeChanges = function ( attributeChanges, attr
 		}
 		// Compare body - default behaviour in #describeChange does nothing
 		if ( !ve.compare( fromBody, toBody ) ) {
-			change = this.describeChange( 'body', {
+			const change = this.describeChange( 'body', {
 				from: fromBody && fromBody.extsrc,
 				to: toBody && toBody.extsrc
 			} );
@@ -185,9 +184,57 @@ ve.dm.MWExtensionNode.static.describeChanges = function ( attributeChanges, attr
 	return [];
 };
 
-ve.dm.MWExtensionNode.static.describeChange = function ( key ) {
+ve.dm.MWExtensionNode.static.describeChange = function ( key, change ) {
 	if ( key === 'body' ) {
-		// TODO: Produce a diff of the body, suitable to display in the sidebar.
+		if ( change.from && change.to ) {
+			const store = new ve.dm.HashValueStore();
+			const linearDiffer = new ve.DiffMatchPatch( store, store );
+			const trimNewlines = /^\n+|\n+$/g;
+			const linearDiff = linearDiffer.getCleanDiff(
+				change.from.replace( trimNewlines, '' ).split( '' ),
+				change.to.replace( trimNewlines, '' ).split( '' ),
+				{ keepOldText: false }
+			);
+			const div = document.createElement( 'div' );
+			linearDiff.forEach( ( diffSection, i ) => {
+				const [ type, data ] = diffSection;
+				const text = data.join( '' );
+				let el, nodeText;
+				switch ( type ) {
+					case ve.DiffMatchPatch.static.DIFF_DELETE:
+						el = document.createElement( 'del' );
+						nodeText = text;
+						break;
+					case ve.DiffMatchPatch.static.DIFF_INSERT:
+						el = document.createElement( 'ins' );
+						nodeText = text;
+						break;
+					case ve.DiffMatchPatch.static.DIFF_EQUAL: {
+						el = document.createElement( 'span' );
+						const lines = text.split( '\n' );
+						const filteredLines = [];
+						if ( lines.length === 1 ) {
+							nodeText = text;
+						} else {
+							if ( i !== 0 ) {
+								filteredLines.push( lines[ 0 ] );
+							}
+							if ( lines.length > 2 ) {
+								filteredLines.push( '…' );
+							}
+							if ( i !== linearDiff.length - 1 ) {
+								filteredLines.push( lines[ lines.length - 1 ] );
+							}
+							nodeText = filteredLines.join( '\n' );
+						}
+						break;
+					}
+				}
+				el.appendChild( document.createTextNode( nodeText ) );
+				div.appendChild( el );
+			} );
+			return [ div ];
+		}
 		return null;
 	}
 	// Parent method
@@ -197,7 +244,7 @@ ve.dm.MWExtensionNode.static.describeChange = function ( key ) {
 /* Methods */
 
 /**
- * Get the extension's name
+ * Get name of the MediaWiki parser extension tag.
  *
  * @return {string} Extension name
  */

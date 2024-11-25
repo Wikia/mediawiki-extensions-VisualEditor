@@ -1,7 +1,7 @@
 /*!
  * VisualEditor ContentEditable MWExternalLinkAnnotation class.
  *
- * @copyright 2011-2020 VisualEditor Team and others; see AUTHORS.txt
+ * @copyright See AUTHORS.txt
  * @license The MIT License (MIT); see LICENSE.txt
  */
 
@@ -20,7 +20,9 @@ ve.ce.MWExternalLinkAnnotation = function VeCeMWExternalLinkAnnotation( model ) 
 	ve.ce.MWExternalLinkAnnotation.super.apply( this, arguments );
 
 	// DOM changes
-	if ( model.getAttribute( 'rel' ) === 'mw:WikiLink/Interwiki' ) {
+	const rel = model.getAttribute( 'rel' ) || '';
+	const relValues = rel.split( /\s+/ );
+	if ( relValues.indexOf( 'mw:WikiLink/Interwiki' ) >= 0 ) {
 		this.$anchor.addClass( 'extiw' );
 	} else {
 		this.$anchor.addClass( 'external' );

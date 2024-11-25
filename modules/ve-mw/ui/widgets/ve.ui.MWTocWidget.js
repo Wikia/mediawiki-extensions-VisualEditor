@@ -1,7 +1,7 @@
 /*!
  * VisualEditor UserInterface MWTocWidget class.
  *
- * @copyright 2011-2020 VisualEditor Team and others; see AUTHORS.txt
+ * @copyright See AUTHORS.txt
  * @license The MIT License (MIT); see LICENSE.txt
  */
 
@@ -16,14 +16,13 @@
  * @param {Object} [config] Configuration options
  */
 ve.ui.MWTocWidget = function VeUiMWTocWidget( surface, config ) {
-
 	// Parent constructor
 	ve.ui.MWTocWidget.super.call( this, config );
 
 	// Properties
 	this.surface = surface;
 	this.doc = surface.getModel().getDocument();
-	this.metaList = surface.getModel().metaList;
+	this.metaList = this.doc.getMetaList();
 	// Topic level 0 lives inside of a toc item
 	this.rootLength = 0;
 	this.initialized = false;
@@ -64,10 +63,9 @@ OO.inheritClass( ve.ui.MWTocWidget, OO.ui.Widget );
  * @param {ve.dm.MetaItem} metaItem
  */
 ve.ui.MWTocWidget.prototype.onMetaListInsert = function ( metaItem ) {
-	var property;
 	// Responsible for adding UI components
 	if ( metaItem instanceof ve.dm.MWTOCMetaItem ) {
-		property = metaItem.getAttribute( 'property' );
+		const property = metaItem.getAttribute( 'property' );
 		if ( property === 'mw:PageProp/forcetoc' ) {
 			this.mwTOCForce = true;
 		} else if ( property === 'mw:PageProp/notoc' ) {
@@ -83,9 +81,8 @@ ve.ui.MWTocWidget.prototype.onMetaListInsert = function ( metaItem ) {
  * @param {ve.dm.MetaItem} metaItem
  */
 ve.ui.MWTocWidget.prototype.onMetaListRemove = function ( metaItem ) {
-	var property;
 	if ( metaItem instanceof ve.dm.MWTOCMetaItem ) {
-		property = metaItem.getAttribute( 'property' );
+		const property = metaItem.getAttribute( 'property' );
 		if ( property === 'mw:PageProp/forcetoc' ) {
 			this.mwTOCForce = false;
 		} else if ( property === 'mw:PageProp/notoc' ) {
@@ -99,32 +96,30 @@ ve.ui.MWTocWidget.prototype.onMetaListRemove = function ( metaItem ) {
  * Initialize TOC based on the presence of magic words
  */
 ve.ui.MWTocWidget.prototype.initFromMetaList = function () {
-	var i = 0,
-		items = this.metaList.getItemsInGroup( 'mwTOC' ),
-		len = items.length,
-		property;
-	if ( len > 0 ) {
-		for ( ; i < len; i++ ) {
-			if ( items[ i ] instanceof ve.dm.MWTOCMetaItem ) {
-				property = items[ i ].getAttribute( 'property' );
-				if ( property === 'mw:PageProp/forcetoc' ) {
-					this.mwTOCForce = true;
-				}
-				if ( property === 'mw:PageProp/notoc' ) {
-					this.mwTOCDisable = true;
-				}
+	const items = this.metaList.getItemsInGroup( 'mwTOC' );
+	if ( items.length === 0 ) {
+		return;
+	}
+	for ( let i = 0; i < items.length; i++ ) {
+		if ( items[ i ] instanceof ve.dm.MWTOCMetaItem ) {
+			const property = items[ i ].getAttribute( 'property' );
+			if ( property === 'mw:PageProp/forcetoc' ) {
+				this.mwTOCForce = true;
+			}
+			if ( property === 'mw:PageProp/notoc' ) {
+				this.mwTOCDisable = true;
 			}
 		}
-		this.updateVisibility();
 	}
+	this.updateVisibility();
 };
 
 /**
  * Hides or shows the TOC based on page and default settings
  */
 ve.ui.MWTocWidget.prototype.updateVisibility = function () {
-	// In MediaWiki if __FORCETOC__ is anywhere TOC is always displayed
-	// ... Even if there is a __NOTOC__ in the article
+	// In MediaWiki if `__FORCETOC__` is anywhere TOC is always displayed
+	// ... Even if there is a `__NOTOC__` in the article
 	this.toggle( !this.mwTOCDisable && ( this.mwTOCForce || this.rootLength >= 3 ) );
 };
 
@@ -157,15 +152,12 @@ ve.ui.MWTocWidget.prototype.updateNode = function ( viewNode ) {
  * Based on generateTOC in Linker.php
  */
 ve.ui.MWTocWidget.prototype.build = function () {
-	var i, l, level, levelDiff, tocNumber, modelNode, viewNode, tocBeforeNode,
-		$list, $text, $item, $link,
-		$newTocList = $( '<ul>' ),
+	const $newTocList = $( '<ul>' ),
 		nodes = this.doc.getNodesByType( 'mwHeading', true ),
 		surfaceView = this.surface.getView(),
 		documentView = surfaceView.getDocument(),
-		lastLevel = 0,
 		stack = [],
-		uri = new mw.Uri();
+		url = new URL( location.href );
 
 	function getItemIndex( $el, n ) {
 		return $el.children( 'li' ).length + ( n === stack.length - 1 ? 1 : 0 );
@@ -177,11 +169,13 @@ ve.ui.MWTocWidget.prototype.build = function () {
 		return false;
 	}
 
-	for ( i = 0, l = nodes.length; i < l; i++ ) {
-		modelNode = nodes[ i ];
-		level = modelNode.getAttribute( 'level' );
+	let lastLevel = 0;
+	for ( let i = 0, l = nodes.length; i < l; i++ ) {
+		const modelNode = nodes[ i ];
+		const level = modelNode.getAttribute( 'level' );
 
 		if ( level > lastLevel ) {
+			let $list;
 			if ( stack.length ) {
 				$list = $( '<ul>' );
 				stack[ stack.length - 1 ].children().last().append( $list );
@@ -190,23 +184,24 @@ ve.ui.MWTocWidget.prototype.build = function () {
 			}
 			stack.push( $list );
 		} else if ( level < lastLevel ) {
-			levelDiff = lastLevel - level;
+			let levelDiff = lastLevel - level;
 			while ( levelDiff > 0 && stack.length > 1 ) {
 				stack.pop();
 				levelDiff--;
 			}
 		}
 
-		tocNumber = stack.map( getItemIndex ).join( '.' );
-		viewNode = documentView.getBranchNodeFromOffset( modelNode.getRange().start );
-		uri.query.section = ( i + 1 ).toString();
+		const tocNumber = stack.map( getItemIndex ).join( '.' );
+		const viewNode = documentView.getBranchNodeFromOffset( modelNode.getRange().start );
+		url.searchParams.set( 'section', ( i + 1 ).toString() );
 		// The following classes are used here:
 		// * toclevel-1, toclevel-2, ...
 		// * tocsection-1, tocsection-2, ...
-		$item = $( '<li>' ).addClass( 'toclevel-' + stack.length ).addClass( 'tocsection-' + ( i + 1 ) );
-		$link = $( '<a>' ).attr( 'href', uri )
-			.append( '<span class="tocnumber">' + tocNumber + '</span> ' );
-		$text = $( '<span>' ).addClass( 'toctext' );
+		const $item = $( '<li>' ).addClass( 'toclevel-' + stack.length ).addClass( 'tocsection-' + ( i + 1 ) );
+		const $link = $( '<a>' ).attr( 'href', url.toString() ).append(
+			$( '<span>' ).addClass( 'tocnumber' ).text( tocNumber )
+		);
+		const $text = $( '<span>' ).addClass( 'toctext' );
 
 		viewNode.$tocText = $text;
 		this.updateNode( viewNode );
@@ -221,7 +216,7 @@ ve.ui.MWTocWidget.prototype.build = function () {
 
 	if ( nodes.length ) {
 		this.rootLength = this.$tocList.children().length;
-		tocBeforeNode = documentView.getBranchNodeFromOffset( nodes[ 0 ].getRange().start );
+		const tocBeforeNode = documentView.getBranchNodeFromOffset( nodes[ 0 ].getRange().start );
 		tocBeforeNode.$element.before( this.$element );
 	} else {
 		this.rootLength = 0;

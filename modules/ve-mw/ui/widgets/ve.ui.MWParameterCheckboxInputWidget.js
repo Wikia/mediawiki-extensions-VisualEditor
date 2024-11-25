@@ -1,12 +1,12 @@
 /*!
  * VisualEditor UserInterface MWParameterCheckboxInputWidget class.
  *
- * @copyright 2011-2020 VisualEditor Team and others; see AUTHORS.txt
+ * @copyright See AUTHORS.txt
  * @license The MIT License (MIT); see LICENSE.txt
  */
 
 /**
- * Creates an ve.ui.MWParameterCheckboxInputWidget object.
+ * Checkbox input for a parameter value which can only contain boolean values.
  *
  * @class
  * @extends OO.ui.CheckboxInputWidget
@@ -15,7 +15,7 @@
  */
 ve.ui.MWParameterCheckboxInputWidget = function VeUiMWParameterCheckboxInputWidget() {
 	// Parent constructor
-	ve.ui.MWParameterCheckboxInputWidget.parent.apply( this, arguments );
+	ve.ui.MWParameterCheckboxInputWidget.super.apply( this, arguments );
 };
 
 /* Inheritance */

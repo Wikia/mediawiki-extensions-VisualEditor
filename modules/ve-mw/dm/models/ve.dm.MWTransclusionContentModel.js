@@ -1,26 +1,27 @@
 /*!
  * VisualEditor DataModel MWTransclusionContentModel class.
  *
- * @copyright 2011-2020 VisualEditor Team and others; see AUTHORS.txt
+ * @copyright See AUTHORS.txt
  * @license The MIT License (MIT); see LICENSE.txt
  */
 
 /**
- * MediaWiki transclusion content model.
+ * Represents a raw wikitext snippet that is part of an unbalanced sequence of template invocations.
+ * Meant to be an item in a {@see ve.dm.MWTransclusionModel}. Holds a back-reference to it's parent.
  *
  * @class
  * @extends ve.dm.MWTransclusionPartModel
  *
  * @constructor
- * @param {ve.dm.MWTransclusionModel} transclusion Transclusion
- * @param {string} [value] Content value
+ * @param {ve.dm.MWTransclusionModel} transclusion
+ * @param {string} [wikitext='']
  */
-ve.dm.MWTransclusionContentModel = function VeDmMWTransclusionContentModel( transclusion, value ) {
+ve.dm.MWTransclusionContentModel = function VeDmMWTransclusionContentModel( transclusion, wikitext ) {
 	// Parent constructor
 	ve.dm.MWTransclusionContentModel.super.call( this, transclusion );
 
 	// Properties
-	this.value = value || '';
+	this.wikitext = wikitext || '';
 };
 
 /* Inheritance */
@@ -30,40 +31,34 @@ OO.inheritClass( ve.dm.MWTransclusionContentModel, ve.dm.MWTransclusionPartModel
 /* Events */
 
 /**
- * @event change
+ * Emitted when the wikitext changed.
+ *
+ * @event ve.dm.MWTransclusionContentModel#change
  */
 
 /* Methods */
 
 /**
- * Get content value.
- *
- * @return {string} Content value
+ * @param {string} wikitext
+ * @fires ve.dm.MWTransclusionContentModel#change
  */
-ve.dm.MWTransclusionContentModel.prototype.getValue = function () {
-	return this.value;
-};
-
-/**
- * Set content value.
- *
- * @param {string} value Content value
- */
-ve.dm.MWTransclusionContentModel.prototype.setValue = function ( value ) {
-	this.value = value;
-	this.emit( 'change' );
+ve.dm.MWTransclusionContentModel.prototype.setWikitext = function ( wikitext ) {
+	if ( this.wikitext !== wikitext ) {
+		this.wikitext = wikitext;
+		this.emit( 'change' );
+	}
 };
 
 /**
  * @inheritdoc
  */
 ve.dm.MWTransclusionContentModel.prototype.serialize = function () {
-	return this.value;
+	return this.wikitext;
 };
 
 /**
  * @inheritdoc
  */
-ve.dm.MWTransclusionContentModel.prototype.getWikitext = function () {
-	return this.value;
+ve.dm.MWTransclusionContentModel.prototype.containsValuableData = function () {
+	return this.wikitext !== '';
 };

@@ -1,7 +1,7 @@
 /*!
  * VisualEditor DataModel MWAlienMetaItem class.
  *
- * @copyright 2011-2020 VisualEditor Team and others; see AUTHORS.txt
+ * @copyright See AUTHORS.txt
  * @license The MIT License (MIT); see LICENSE.txt
  */
 
@@ -28,8 +28,8 @@ OO.inheritClass( ve.dm.MWAlienMetaItem, ve.dm.AlienMetaItem );
 ve.dm.MWAlienMetaItem.static.name = 'mwAlienMeta';
 
 ve.dm.MWAlienMetaItem.static.matchRdfaTypes = [
-	// HACK: Avoid matching things that are better handled by MWAlienExtensionNode or MWIncludesNode
-	/^mw:(?!Extension|Includes)/
+	// HACK: Avoid matching things that are better handled by MWAlienExtensionNode or MWIncludesNode or MWAnnotationNode
+	/^mw:(?!Extension|Includes|Annotation)/
 ];
 
 // toDataElement inherited from AlienMetaItem, will return regular alienMeta elements but

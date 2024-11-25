@@ -1,7 +1,7 @@
 /*!
  * VisualEditor MediaWiki Initialization ApiResponseCache class.
  *
- * @copyright 2011-2020 VisualEditor Team and others; see AUTHORS.txt
+ * @copyright See AUTHORS.txt
  * @license The MIT License (MIT); see LICENSE.txt
  */
 
@@ -46,19 +46,17 @@ OO.mixinClass( ve.init.mw.ApiResponseCache, OO.EventEmitter );
  *
  * @abstract
  * @static
- * @param {Object} page The page object
+ * @param {Object} page
  * @return {Object|undefined} Any relevant info that we want to cache and return.
  */
 ve.init.mw.ApiResponseCache.static.processPage = null;
 
 /**
- * Normalize the title of the response
- *
- * @param {string} title Title
- * @return {string} Normalized title
+ * @param {string} title
+ * @return {string}
  */
 ve.init.mw.ApiResponseCache.static.normalizeTitle = function ( title ) {
-	var titleObj = mw.Title.newFromText( title );
+	const titleObj = mw.Title.newFromText( title );
 	if ( !titleObj ) {
 		return title;
 	}
@@ -72,7 +70,7 @@ ve.init.mw.ApiResponseCache.static.normalizeTitle = function ( title ) {
  * returns an already-resolved promise. Otherwise, it returns a pending promise and schedules
  * an request to retrieve the data.
  *
- * @param {string} title Title
+ * @param {string} title
  * @return {jQuery.Promise} Promise that will be resolved with the data once it's available
  */
 ve.init.mw.ApiResponseCache.prototype.get = function ( title ) {
@@ -107,7 +105,7 @@ ve.init.mw.ApiResponseCache.prototype.getCached = function ( name ) {
 /**
  * Fired when a new entry is added to the cache.
  *
- * @event add
+ * @event ve.init.mw.ApiResponseCache#add
  * @param {Object} entries Cache entries that were added. Object mapping names to data objects.
  */
 
@@ -115,11 +113,10 @@ ve.init.mw.ApiResponseCache.prototype.getCached = function ( name ) {
  * Add entries to the cache. Does not overwrite already-set entries.
  *
  * @param {Object} entries Object keyed by page title, with the values being data objects
- * @fires add
+ * @fires ve.init.mw.ApiResponseCache#add
  */
 ve.init.mw.ApiResponseCache.prototype.set = function ( entries ) {
-	var name;
-	for ( name in entries ) {
+	for ( const name in entries ) {
 		if ( !Object.prototype.hasOwnProperty.call( this.deferreds, name ) ) {
 			this.deferreds[ name ] = ve.createDeferred();
 		}
@@ -144,54 +141,51 @@ ve.init.mw.ApiResponseCache.prototype.getRequestPromise = null;
  * Perform any scheduled API requests.
  *
  * @private
- * @fires add
+ * @fires ve.init.mw.ApiResponseCache#add
  */
 ve.init.mw.ApiResponseCache.prototype.processQueue = function () {
-	var subqueue, queue,
-		cache = this;
-
-	function rejectSubqueue( rejectQueue ) {
-		var i, len;
-		for ( i = 0, len = rejectQueue.length; i < len; i++ ) {
-			cache.deferreds[ rejectQueue[ i ] ].reject();
+	const rejectSubqueue = ( rejectQueue ) => {
+		for ( let i = 0, len = rejectQueue.length; i < len; i++ ) {
+			this.deferreds[ rejectQueue[ i ] ].reject();
 		}
-	}
+	};
 
-	function processResult( data ) {
-		var i, pageid, page, processedPage, from, mappedTitles = [],
-			pages = ( data.query && data.query.pages ) || data.pages,
+	const processResult = ( data ) => {
+		const pages = ( data.query && data.query.pages ) || data.pages,
 			processed = {};
 
-		[ 'redirects', 'normalized', 'converted' ].forEach( function ( map ) {
-			mappedTitles = mappedTitles.concat( ( data.query && data.query[ map ] ) || [] );
+		const mappedTitles = [];
+		[ 'redirects', 'normalized', 'converted' ].forEach( ( map ) => {
+			ve.batchPush( mappedTitles, ( data.query && data.query[ map ] ) || [] );
 		} );
 
 		if ( pages ) {
-			for ( pageid in pages ) {
+			let page, processedPage;
+			for ( const pageid in pages ) {
 				page = pages[ pageid ];
-				processedPage = cache.constructor.static.processPage( page );
+				processedPage = this.constructor.static.processPage( page );
 				if ( processedPage !== undefined ) {
 					processed[ page.title ] = processedPage;
 				}
 			}
-			for ( i = 0; i < mappedTitles.length; i++ ) {
+			for ( let i = 0; i < mappedTitles.length; i++ ) {
 				// Locate the title in mapped titles, if any.
 				if ( mappedTitles[ i ].to === page.title ) {
-					from = mappedTitles[ i ].fromencoded === '' ?
+					const from = mappedTitles[ i ].fromencoded === '' ?
 						decodeURIComponent( mappedTitles[ i ].from ) :
 						mappedTitles[ i ].from;
 					processed[ from ] = processedPage;
 					break;
 				}
 			}
-			cache.set( processed );
+			this.set( processed );
 		}
-	}
+	};
 
-	queue = this.queue;
+	const queue = this.queue;
 	this.queue = [];
 	while ( queue.length ) {
-		subqueue = queue.splice( 0, 50 ).map( this.constructor.static.normalizeTitle );
+		const subqueue = queue.splice( 0, 50 ).map( this.constructor.static.normalizeTitle );
 		this.getRequestPromise( subqueue )
 			.then( processResult )
 

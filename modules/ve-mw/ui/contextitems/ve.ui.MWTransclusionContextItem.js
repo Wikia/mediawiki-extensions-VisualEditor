@@ -1,7 +1,7 @@
 /*!
  * VisualEditor MWTransclusionContextItem class.
  *
- * @copyright 2011-2020 VisualEditor Team and others; see http://ve.mit-license.org
+ * @copyright See AUTHORS.txt
  */
 
 /**
@@ -11,9 +11,9 @@
  * @extends ve.ui.LinearContextItem
  *
  * @constructor
- * @param {ve.ui.Context} context Context item is in
- * @param {ve.dm.Model} model Model item is related to
- * @param {Object} config Configuration options
+ * @param {ve.ui.LinearContext} context Context the item is in
+ * @param {ve.dm.Model} model Model the item is related to
+ * @param {Object} [config]
  */
 ve.ui.MWTransclusionContextItem = function VeUiMWTransclusionContextItem() {
 	// Parent constructor
@@ -22,7 +22,7 @@ ve.ui.MWTransclusionContextItem = function VeUiMWTransclusionContextItem() {
 	// Initialization
 	this.$element.addClass( 've-ui-mwTransclusionContextItem' );
 	if ( !this.model.isSingleTemplate() ) {
-		this.setLabel( ve.msg( 'visualeditor-dialogbutton-transclusion-tooltip' ) );
+		this.setLabel( ve.msg( 'visualeditor-dialog-transclusion-title-edit-transclusion' ) );
 	}
 };
 
@@ -67,19 +67,33 @@ ve.ui.MWTransclusionContextItem.static.isCompatibleWith =
  * @inheritdoc
  */
 ve.ui.MWTransclusionContextItem.prototype.getDescription = function () {
-	var nodeClass = ve.ce.nodeFactory.lookup( this.model.constructor.static.name );
+	/** @type {ve.ce.MWTransclusionNode} */
+	const nodeClass = ve.ce.nodeFactory.lookup( this.model.constructor.static.name );
 	return ve.msg(
 		'visualeditor-dialog-transclusion-contextitem-description',
 		nodeClass.static.getDescription( this.model ),
-		nodeClass.static.getTemplatePartDescriptions( this.model ).length
+		this.model.getPartsList().length
 	);
 };
 
 /**
  * @inheritdoc
  */
+ve.ui.MWTransclusionContextItem.prototype.renderBody = function () {
+	const nodeClass = ve.ce.nodeFactory.lookup( this.model.constructor.static.name );
+	// eslint-disable-next-line no-jquery/no-append-html
+	this.$body.append( ve.htmlMsg(
+		'visualeditor-dialog-transclusion-contextitem-description',
+		nodeClass.static.getDescriptionDom( this.model ),
+		this.model.getPartsList().length
+	) );
+};
+
+/**
+ * @inheritdoc
+ */
 ve.ui.MWTransclusionContextItem.prototype.onEditButtonClick = function () {
-	var surfaceModel = this.context.getSurface().getModel(),
+	const surfaceModel = this.context.getSurface().getModel(),
 		selection = surfaceModel.getSelection();
 
 	if ( selection instanceof ve.dm.TableSelection ) {
@@ -88,8 +102,28 @@ ve.ui.MWTransclusionContextItem.prototype.onEditButtonClick = function () {
 		)[ 0 ] );
 	}
 
-	// Parent method
 	ve.ui.MWTransclusionContextItem.super.prototype.onEditButtonClick.apply( this, arguments );
+
+	this.context.getSurface().getDialogs().once( 'opening', ( win, opening ) => {
+		opening.then( () => {
+			this.toggleLoadingVisualization( false );
+		} );
+	} );
+	this.toggleLoadingVisualization( true );
+};
+
+/**
+ * @private
+ * @param {boolean} [isLoading=false]
+ */
+ve.ui.MWTransclusionContextItem.prototype.toggleLoadingVisualization = function ( isLoading ) {
+	this.editButton.setDisabled( isLoading );
+	if ( isLoading ) {
+		this.originalEditButtonLabel = this.editButton.getLabel();
+		this.editButton.setLabel( ve.msg( 'visualeditor-dialog-transclusion-contextitem-loading' ) );
+	} else if ( this.originalEditButtonLabel ) {
+		this.editButton.setLabel( this.originalEditButtonLabel );
+	}
 };
 
 /* Registration */

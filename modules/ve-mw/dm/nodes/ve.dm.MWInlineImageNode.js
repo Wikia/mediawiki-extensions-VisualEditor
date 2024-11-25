@@ -1,7 +1,7 @@
 /*!
  * VisualEditor DataModel MWInlineImage class.
  *
- * @copyright 2011-2020 VisualEditor Team and others; see AUTHORS.txt
+ * @copyright See AUTHORS.txt
  * @license The MIT License (MIT); see LICENSE.txt
  */
 
@@ -10,7 +10,7 @@
  *
  * @class
  * @extends ve.dm.LeafNode
- * @mixins ve.dm.MWImageNode
+ * @mixes ve.dm.MWImageNode
  *
  * @constructor
  * @param {Object} [element] Reference to element in linear model
@@ -39,49 +39,69 @@ ve.dm.MWInlineImageNode.static.isContent = true;
 ve.dm.MWInlineImageNode.static.name = 'mwInlineImage';
 
 ve.dm.MWInlineImageNode.static.preserveHtmlAttributes = function ( attribute ) {
-	var attributes = [ 'typeof', 'class', 'src', 'resource', 'width', 'height', 'href', 'data-mw' ];
+	const attributes = [ 'typeof', 'class', 'src', 'resource', 'width', 'height', 'href', 'data-mw' ];
 	return attributes.indexOf( attribute ) === -1;
 };
 
-// <span> is here for backwards compatibility with Parsoid content that may be
-// stored in RESTBase.  This is now generated as <figure-inline>.  It should
-// be safe to remove when verion 1.5 content is no longer acceptable.
-ve.dm.MWInlineImageNode.static.matchTagNames = [ 'span', 'figure-inline' ];
+ve.dm.MWInlineImageNode.static.matchTagNames = [ 'span' ];
 
 ve.dm.MWInlineImageNode.static.disallowedAnnotationTypes = [ 'link' ];
 
 ve.dm.MWInlineImageNode.static.toDataElement = function ( domElements, converter ) {
-	var dataElement, attributes, types,
-		figureInline = domElements[ 0 ],
-		imgWrapper = figureInline.children[ 0 ], // <a> or <span>
-		img = imgWrapper.children[ 0 ], // <img>, <video> or <audio>
-		typeofAttrs = ( figureInline.getAttribute( 'typeof' ) || '' ).trim().split( /\s+/ ),
-		mwDataJSON = figureInline.getAttribute( 'data-mw' ),
-		mwData = mwDataJSON ? JSON.parse( mwDataJSON ) : {},
-		classes = figureInline.getAttribute( 'class' ),
-		recognizedClasses = [],
-		errorIndex = typeofAttrs.indexOf( 'mw:Error' ),
-		width = img.getAttribute( 'width' ),
-		height = img.getAttribute( 'height' );
+	const container = domElements[ 0 ]; // <span>
+	if ( !container.children.length ) {
+		// Malformed image, alienate (T267282)
+		return null;
+	}
+	const img = container.querySelector( '.mw-file-element' ); // <img>, <video>, <audio>, or <span> if mw:Error
+	// Images copied from the old parser output can have typeof=mw:Image but no resource information. T337438
+	if ( !img || !img.hasAttribute( 'resource' ) ) {
+		return [];
+	}
+	const imgWrapper = img.parentNode; // <a> or <span>
+	const typeofAttrs = ( container.getAttribute( 'typeof' ) || '' ).trim().split( /\s+/ );
+	const mwDataJSON = container.getAttribute( 'data-mw' );
+	const mwData = mwDataJSON ? JSON.parse( mwDataJSON ) : {};
+	let classes = container.getAttribute( 'class' );
+	const recognizedClasses = [];
+	const errorIndex = typeofAttrs.indexOf( 'mw:Error' );
+	const isError = errorIndex !== -1;
+	const errorText = isError ? img.textContent : null;
+	const width = img.getAttribute( isError ? 'data-width' : 'width' );
+	const height = img.getAttribute( isError ? 'data-height' : 'height' );
 
-	if ( errorIndex !== -1 ) {
+	let href = imgWrapper.getAttribute( 'href' );
+	if ( href ) {
+		// Convert absolute URLs to relative if the href refers to a page on this wiki.
+		// Otherwise Parsoid generates |link= options for copy-pasted images (T193253).
+		const targetData = mw.libs.ve.getTargetDataFromHref( href, converter.getTargetHtmlDocument() );
+		if ( targetData.isInternal ) {
+			href = mw.libs.ve.encodeParsoidResourceName( targetData.title );
+		}
+	}
+
+	if ( isError ) {
 		typeofAttrs.splice( errorIndex, 1 );
 	}
 
-	types = this.rdfaToTypes[ typeofAttrs[ 0 ] ];
+	const types = this.rdfaToTypes[ typeofAttrs[ 0 ] ];
 
-	attributes = {
+	const attributes = {
 		mediaClass: types.mediaClass,
+		mediaTag: img.nodeName.toLowerCase(),
 		type: types.frameType,
 		src: img.getAttribute( 'src' ) || img.getAttribute( 'poster' ),
-		href: imgWrapper.getAttribute( 'href' ),
+		href: href,
+		imageClassAttr: img.getAttribute( 'class' ),
+		imgWrapperClassAttr: imgWrapper.getAttribute( 'class' ),
 		resource: img.getAttribute( 'resource' ),
 		originalClasses: classes,
 		width: width !== null && width !== '' ? +width : null,
 		height: height !== null && height !== '' ? +height : null,
 		alt: img.getAttribute( 'alt' ),
 		mw: mwData,
-		isError: errorIndex !== -1
+		isError: isError,
+		errorText: errorText
 	};
 
 	// Extract individual classes
@@ -95,8 +115,8 @@ ve.dm.MWInlineImageNode.static.toDataElement = function ( domElements, converter
 
 	// Vertical alignment
 	attributes.valign = 'default';
-	[ 'midde', 'baseline', 'sub', 'super', 'top', 'text-top', 'bottom', 'text-bottom' ].some( function ( valign ) {
-		var className = 'mw-valign-' + valign;
+	[ 'midde', 'baseline', 'sub', 'super', 'top', 'text-top', 'bottom', 'text-bottom' ].some( ( valign ) => {
+		const className = 'mw-valign-' + valign;
 		if ( classes.indexOf( className ) !== -1 ) {
 			attributes.valign = valign;
 			recognizedClasses.push( className );
@@ -120,51 +140,61 @@ ve.dm.MWInlineImageNode.static.toDataElement = function ( domElements, converter
 	// Store unrecognized classes so we can restore them on the way out
 	attributes.unrecognizedClasses = OO.simpleArrayDifference( classes, recognizedClasses );
 
-	dataElement = { type: this.name, attributes: attributes };
+	const dataElement = { type: this.name, attributes: attributes };
 
 	this.storeGeneratedContents( dataElement, dataElement.attributes.src, converter.getStore() );
 
 	return dataElement;
 };
 
-ve.dm.MWInlineImageNode.static.toDomElements = function ( data, doc ) {
-	var firstChild, srcAttr,
-		mediaClass = data.attributes.mediaClass,
-		figureInline = doc.createElement( 'figure-inline' ),
-		img = doc.createElement( this.typesToTags[ mediaClass ] ),
-		classes = [],
-		originalClasses = data.attributes.originalClasses;
+ve.dm.MWInlineImageNode.static.toDomElements = function ( dataElement, doc, converter ) {
+	const attributes = dataElement.attributes,
+		container = doc.createElement( 'span' ),
+		imgWrapper = doc.createElement( attributes.href ? 'a' : 'span' ),
+		img = doc.createElement( attributes.isError ? 'span' : attributes.mediaTag ),
+		originalClasses = attributes.originalClasses;
 
-	ve.setDomAttributes( img, data.attributes, [ 'width', 'height', 'resource' ] );
-	srcAttr = this.typesToSrcAttrs[ mediaClass ];
-	if ( srcAttr ) {
-		img.setAttribute( srcAttr, data.attributes.src );
+	ve.setDomAttributes( img, attributes, [ 'resource' ] );
+	const width = attributes.width;
+	const height = attributes.height;
+	if ( width !== null ) {
+		img.setAttribute( attributes.isError ? 'data-width' : 'width', width );
+	}
+	if ( height !== null ) {
+		img.setAttribute( attributes.isError ? 'data-width' : 'height', height );
 	}
 
-	if ( typeof data.attributes.alt === 'string' ) {
-		img.setAttribute( 'alt', data.attributes.alt );
+	const srcAttr = this.tagsToSrcAttrs[ img.nodeName.toLowerCase() ];
+	if ( srcAttr && !attributes.isError ) {
+		img.setAttribute( srcAttr, attributes.src );
+	}
+
+	// TODO: This does not make sense for broken images (when img is a span node)
+	if ( typeof attributes.alt === 'string' ) {
+		img.setAttribute( 'alt', attributes.alt );
 	}
 
 	// RDFa type
-	figureInline.setAttribute( 'typeof', this.getRdfa( mediaClass, data.attributes.type ) );
-	if ( !ve.isEmptyObject( data.attributes.mw ) ) {
-		figureInline.setAttribute( 'data-mw', JSON.stringify( data.attributes.mw ) );
+	container.setAttribute( 'typeof', this.getRdfa( attributes.mediaClass, attributes.type, attributes.isError ) );
+	if ( !ve.isEmptyObject( attributes.mw ) ) {
+		container.setAttribute( 'data-mw', JSON.stringify( attributes.mw ) );
 	}
 
-	if ( data.attributes.defaultSize ) {
+	let classes = [];
+	if ( attributes.defaultSize ) {
 		classes.push( 'mw-default-size' );
 	}
 
-	if ( data.attributes.borderImage ) {
+	if ( attributes.borderImage ) {
 		classes.push( 'mw-image-border' );
 	}
 
-	if ( data.attributes.valign && data.attributes.valign !== 'default' ) {
-		classes.push( 'mw-valign-' + data.attributes.valign );
+	if ( attributes.valign && attributes.valign !== 'default' ) {
+		classes.push( 'mw-valign-' + attributes.valign );
 	}
 
-	if ( data.attributes.unrecognizedClasses ) {
-		classes = OO.simpleArrayUnion( classes, data.attributes.unrecognizedClasses );
+	if ( attributes.unrecognizedClasses ) {
+		classes = OO.simpleArrayUnion( classes, attributes.unrecognizedClasses );
 	}
 
 	if (
@@ -172,23 +202,38 @@ ve.dm.MWInlineImageNode.static.toDomElements = function ( data, doc ) {
 		ve.compare( originalClasses.trim().split( /\s+/ ).sort(), classes.sort() )
 	) {
 		// eslint-disable-next-line mediawiki/class-doc
-		figureInline.className = originalClasses;
+		container.className = originalClasses;
 	} else if ( classes.length > 0 ) {
 		// eslint-disable-next-line mediawiki/class-doc
-		figureInline.className = classes.join( ' ' );
+		container.className = classes.join( ' ' );
 	}
 
-	if ( data.attributes.href ) {
-		firstChild = doc.createElement( 'a' );
-		firstChild.setAttribute( 'href', data.attributes.href );
-	} else {
-		firstChild = doc.createElement( 'span' );
+	if ( attributes.href ) {
+		imgWrapper.setAttribute( 'href', attributes.href );
 	}
 
-	figureInline.appendChild( firstChild );
-	firstChild.appendChild( img );
+	if ( attributes.imgWrapperClassAttr ) {
+		// eslint-disable-next-line mediawiki/class-doc
+		imgWrapper.className = attributes.imgWrapperClassAttr;
+	}
 
-	return [ figureInline ];
+	if ( attributes.imageClassAttr ) {
+		// eslint-disable-next-line mediawiki/class-doc
+		img.className = attributes.imageClassAttr;
+	}
+
+	if ( attributes.isError ) {
+		if ( converter.isForPreview() ) {
+			imgWrapper.classList.add( 'new' );
+		}
+		const filename = mw.libs.ve.normalizeParsoidResourceName( attributes.resource || '' );
+		img.appendChild( doc.createTextNode( attributes.errorText ? attributes.errorText : filename ) );
+	}
+
+	imgWrapper.appendChild( img );
+	container.appendChild( imgWrapper );
+
+	return [ container ];
 };
 
 /* Registration */

@@ -1,7 +1,7 @@
 /*!
  * VisualEditor DataModel MWImageNode class.
  *
- * @copyright 2011-2020 VisualEditor Team and others; see AUTHORS.txt
+ * @copyright See AUTHORS.txt
  * @license The MIT License (MIT); see LICENSE.txt
  */
 
@@ -11,8 +11,8 @@
  * @class
  * @abstract
  * @extends ve.dm.GeneratedContentNode
- * @mixins ve.dm.FocusableNode
- * @mixins ve.dm.ResizableNode
+ * @mixes ve.dm.FocusableNode
+ * @mixes ve.dm.ResizableNode
  *
  * @constructor
  */
@@ -53,9 +53,9 @@ OO.mixinClass( ve.dm.MWImageNode, ve.dm.ResizableNode );
 /* Static methods */
 
 ve.dm.MWImageNode.static.rdfaToTypes = ( function () {
-	var rdfaToType = {};
+	const rdfaToType = {};
 
-	[ 'Image', 'Video', 'Audio' ].forEach( function ( mediaClass ) {
+	[ 'File', 'Image', 'Video', 'Audio' ].forEach( ( mediaClass ) => {
 		rdfaToType[ 'mw:' + mediaClass ] = { mediaClass: mediaClass, frameType: 'none' };
 		rdfaToType[ 'mw:' + mediaClass + '/Frameless' ] = { mediaClass: mediaClass, frameType: 'frameless' };
 		// Block image only:
@@ -70,12 +70,13 @@ ve.dm.MWImageNode.static.rdfaToTypes = ( function () {
  * Get RDFa type
  *
  * @static
- * @param {string} mediaClass Media class, one of 'Image', 'Video' or 'Audio'
+ * @param {string} mediaClass Media class, one of 'File', 'Image', 'Video' or 'Audio'
  * @param {string} frameType Frame type, one of 'none', 'frameless', 'thumb' or 'frame'
+ * @param {boolean} isError Whether the included media file is missing
  * @return {string} RDFa type
  */
-ve.dm.MWImageNode.static.getRdfa = function ( mediaClass, frameType ) {
-	return 'mw:' + mediaClass + {
+ve.dm.MWImageNode.static.getRdfa = function ( mediaClass, frameType, isError ) {
+	return ( isError ? 'mw:Error ' : '' ) + 'mw:' + mediaClass + {
 		none: '',
 		frameless: '/Frameless',
 		// Block image only:
@@ -85,25 +86,15 @@ ve.dm.MWImageNode.static.getRdfa = function ( mediaClass, frameType ) {
 };
 
 /**
- * Map media types to tag names
+ * Map media tags to source attributes
  *
  * @type {Object}
  */
-ve.dm.MWImageNode.static.typesToTags = {
-	Image: 'img',
-	Audio: 'audio',
-	Video: 'video'
-};
-
-/**
- * Map media types to source attributes
- *
- * @type {Object}
- */
-ve.dm.MWImageNode.static.typesToSrcAttrs = {
-	Image: 'src',
-	Audio: null,
-	Video: 'poster'
+ve.dm.MWImageNode.static.tagsToSrcAttrs = {
+	img: 'src',
+	audio: null,
+	video: 'poster',
+	span: null
 };
 
 /**
@@ -132,8 +123,7 @@ ve.dm.MWImageNode.static.isDiffComparable = function ( element, other ) {
 };
 
 ve.dm.MWImageNode.static.describeChanges = function ( attributeChanges, attributes ) {
-	var key, sizeFrom, sizeTo, change,
-		customKeys = [ 'width', 'height', 'defaultSize', 'src', 'href' ],
+	const customKeys = [ 'width', 'height', 'defaultSize', 'src', 'href' ],
 		descriptions = [];
 
 	function describeSize( width, height ) {
@@ -141,6 +131,7 @@ ve.dm.MWImageNode.static.describeChanges = function ( attributeChanges, attribut
 	}
 
 	if ( 'width' in attributeChanges || 'height' in attributeChanges ) {
+		let sizeFrom, sizeTo;
 		if ( attributeChanges.defaultSize && attributeChanges.defaultSize.from === true ) {
 			sizeFrom = ve.msg( 'visualeditor-mediasizewidget-sizeoptions-default' );
 		} else {
@@ -162,14 +153,16 @@ ve.dm.MWImageNode.static.describeChanges = function ( attributeChanges, attribut
 			ve.htmlMsg( 'visualeditor-changedesc-image-size', this.wrapText( 'del', sizeFrom ), this.wrapText( 'ins', sizeTo ) )
 		);
 	}
-	for ( key in attributeChanges ) {
+	for ( const key in attributeChanges ) {
 		if ( customKeys.indexOf( key ) === -1 ) {
 			if ( key === 'borderImage' && !attributeChanges.borderImage.from && !attributeChanges.borderImage.to ) {
 				// Skip noise from the data model
 				continue;
 			}
-			change = this.describeChange( key, attributeChanges[ key ] );
-			descriptions.push( change );
+			const change = this.describeChange( key, attributeChanges[ key ] );
+			if ( change ) {
+				descriptions.push( change );
+			}
 		}
 	}
 	return descriptions;
@@ -188,6 +181,8 @@ ve.dm.MWImageNode.static.describeChange = function ( key, change ) {
 				this.wrapText( 'del', ve.msg( 'visualeditor-align-desc-' + change.from ) ),
 				this.wrapText( 'ins', ve.msg( 'visualeditor-align-desc-' + change.to ) )
 			);
+		case 'originalWidth':
+		case 'originalHeight':
 		case 'originalClasses':
 		case 'unrecognizedClasses':
 			return;
@@ -205,7 +200,7 @@ ve.dm.MWImageNode.static.describeChange = function ( key, change ) {
  * @return {Object} The new width and height of the scaled image
  */
 ve.dm.MWImageNode.static.scaleToThumbnailSize = function ( dimensions, mediaType ) {
-	var defaultThumbSize = mw.config.get( 'wgVisualEditorConfig' )
+	const defaultThumbSize = mw.config.get( 'wgVisualEditorConfig' )
 		.thumbLimits[ mw.user.options.get( 'thumbsize' ) ];
 
 	mediaType = mediaType || 'BITMAP';
@@ -232,12 +227,12 @@ ve.dm.MWImageNode.static.scaleToThumbnailSize = function ( dimensions, mediaType
  * @return {Object} The new width and height of the scaled image.
  */
 ve.dm.MWImageNode.static.resizeToBoundingBox = function ( imageDimensions, boundingBox ) {
-	var newDimensions = ve.copy( imageDimensions ),
-		scale = Math.min(
-			boundingBox.height / imageDimensions.height,
-			boundingBox.width / imageDimensions.width
-		);
+	const scale = Math.min(
+		boundingBox.height / imageDimensions.height,
+		boundingBox.width / imageDimensions.width
+	);
 
+	let newDimensions = ve.copy( imageDimensions );
 	if ( scale < 1 ) {
 		// Scale down
 		newDimensions = {
@@ -256,11 +251,10 @@ ve.dm.MWImageNode.static.resizeToBoundingBox = function ( imageDimensions, bound
  * @param {ve.dm.Scalable} scalable The scalable object to update
  */
 ve.dm.MWImageNode.static.syncScalableToType = function ( type, mediaType, scalable ) {
-	var originalDimensions, dimensions,
-		defaultThumbSize = mw.config.get( 'wgVisualEditorConfig' )
-			.thumbLimits[ mw.user.options.get( 'thumbsize' ) ];
+	const defaultThumbSize = mw.config.get( 'wgVisualEditorConfig' )
+		.thumbLimits[ mw.user.options.get( 'thumbsize' ) ];
 
-	originalDimensions = scalable.getOriginalDimensions();
+	const originalDimensions = scalable.getOriginalDimensions();
 
 	// We can only set default dimensions if we have the original ones
 	if ( originalDimensions ) {
@@ -268,6 +262,7 @@ ve.dm.MWImageNode.static.syncScalableToType = function ( type, mediaType, scalab
 			// Set the default size to that in the wiki configuration if
 			// 1. The original image width is not smaller than the default
 			// 2. If the image is an SVG drawing
+			let dimensions;
 			if ( originalDimensions.width >= defaultThumbSize || mediaType === 'DRAWING' ) {
 				dimensions = ve.dm.Scalable.static.getDimensionsFromValue( {
 					width: defaultThumbSize
@@ -311,9 +306,8 @@ ve.dm.MWImageNode.static.syncScalableToType = function ( type, mediaType, scalab
 			scalable.setEnforcedMax( false );
 		}
 	}
-	// TODO: Some day, when svgMaxSize works properly in MediaWiki
-	// we can add it back as max dimension consideration:
-	// mw.config.get( 'wgVisualEditorConfig' ).svgMaxSize
+	// TODO: Some day, when $wgSvgMaxSize works properly in MediaWiki
+	// we can add it back as max dimension consideration.
 };
 
 /**
@@ -326,7 +320,7 @@ ve.dm.MWImageNode.static.getScalablePromise = function ( filename ) {
 	// On the first call set off an async call to update the scalable's
 	// original dimensions from the API.
 	if ( ve.init.platform.imageInfoCache ) {
-		return ve.init.platform.imageInfoCache.get( filename ).then( function ( info ) {
+		return ve.init.platform.imageInfoCache.get( filename ).then( ( info ) => {
 			if ( !info || info.missing ) {
 				return ve.createDeferred().reject().promise();
 			}
@@ -367,28 +361,26 @@ ve.dm.MWImageNode.prototype.getFilename = function () {
  * @inheritdoc
  */
 ve.dm.MWImageNode.prototype.getScalable = function () {
-	var oldMediaType,
-		imageNode = this;
 	if ( !this.scalablePromise ) {
 		this.scalablePromise = ve.dm.MWImageNode.static.getScalablePromise( this.getFilename() );
 		// If the promise was already resolved before getScalablePromise returned, then jQuery will execute the done straight away.
 		// So don't just do getScalablePromise( ... ).done because we need to make sure that this.scalablePromise gets set first.
-		this.scalablePromise.done( function ( info ) {
+		this.scalablePromise.done( ( info ) => {
 			if ( info ) {
-				imageNode.getScalable().setOriginalDimensions( {
+				this.getScalable().setOriginalDimensions( {
 					width: info.width,
 					height: info.height
 				} );
-				oldMediaType = imageNode.mediaType;
+				const oldMediaType = this.mediaType;
 				// Update media type
-				imageNode.mediaType = info.mediatype;
+				this.mediaType = info.mediatype;
 				// Update according to type
-				imageNode.constructor.static.syncScalableToType(
-					imageNode.getAttribute( 'type' ),
-					imageNode.mediaType,
-					imageNode.getScalable()
+				this.constructor.static.syncScalableToType(
+					this.getAttribute( 'type' ),
+					this.mediaType,
+					this.getScalable()
 				);
-				imageNode.emit( 'attributeChange', 'mediaType', oldMediaType, imageNode.mediaType );
+				this.emit( 'attributeChange', 'mediaType', oldMediaType, this.mediaType );
 			}
 		} );
 	}
@@ -429,5 +421,9 @@ ve.dm.MWImageNode.prototype.getMediaType = function () {
  * @return {string} RDFa type
  */
 ve.dm.MWImageNode.prototype.getRdfa = function () {
-	return this.constructor.static.getRdfa( this.getAttribute( 'mediaClass' ), this.getAttribute( 'type' ) );
+	return this.constructor.static.getRdfa(
+		this.getAttribute( 'mediaClass' ),
+		this.getAttribute( 'type' ),
+		this.getAttribute( 'isError' )
+	);
 };

@@ -1,7 +1,7 @@
 /*!
  * VisualEditor user interface MWWelcomeDialog class.
  *
- * @copyright 2011-2020 VisualEditor Team and others; see AUTHORS.txt
+ * @copyright See AUTHORS.txt
  * @license The MIT License (MIT); see LICENSE.txt
  */
 
@@ -62,19 +62,19 @@ mw.libs.ve.WelcomeDialog.prototype.getSetupProcess = function ( data ) {
 		message: $( '<span>' )
 			.addClass( 've-init-mw-welcomeDialog-content' )
 			.append(
-				document.createTextNode( mw.msg( 'visualeditor-welcomedialog-content' ) ),
+				$( document.createTextNode( mw.msg( 'visualeditor-welcomedialog-content' ) ) ),
 				$( '<br>' ),
-				document.createTextNode( mw.msg( 'visualeditor-welcomedialog-content-thanks' ) )
+				$( document.createTextNode( mw.msg( 'visualeditor-welcomedialog-content-thanks' ) ) )
 			)
 	}, data );
 
 	return mw.libs.ve.WelcomeDialog.super.prototype.getSetupProcess.call( this, data )
-		.next( function () {
+		.next( () => {
 			this.switchable = data.switchable;
 			this.editor = data.editor;
 
 			this.actions.setMode( this.switchable ? this.editor : 'noswitch' );
-		}, this );
+		} );
 };
 
 /**
@@ -82,9 +82,9 @@ mw.libs.ve.WelcomeDialog.prototype.getSetupProcess = function ( data ) {
  */
 mw.libs.ve.WelcomeDialog.prototype.getActionProcess = function ( action ) {
 	if ( action === 'switch-wte' ) {
-		return new OO.ui.Process( function () {
+		return new OO.ui.Process( () => {
 			this.close( { action: 'switch-wte' } );
-		}, this );
+		} );
 	}
 
 	// Parent method

@@ -1,12 +1,15 @@
 {
 	"@metadata": {
 		"authors": [
-			"Chulsu463"
+			"Chulsu463",
+			"MiiCii"
 		]
 	},
-	"tooltip-ca-ve-edit": "ere fiyelen isamjambi",
-	"visualeditor-backbutton-tooltip": "marimbi",
-	"visualeditor-ca-createsource": "sekiyen arara",
-	"visualeditor-ca-editsource": "sekiyen isamjambi",
-	"visualeditor-ca-editsource-section": "sekiyen isamjambi"
+	"tooltip-ca-ve-edit": "Ere afaha be banjibume arara",
+	"visualeditor-backbutton-tooltip": "Marimbi",
+	"visualeditor-ca-createlocaldescriptionsource": "Tesu ba -i nirume fisembure sekiyen kode be nonggibure",
+	"visualeditor-ca-createsource": "Sekiyen kode be fukjileme ilibure",
+	"visualeditor-ca-editsource": "Sekiyen isamjambi",
+	"visualeditor-ca-editsource-section": "Sekiyen kode be banjibume arara",
+	"visualeditor-descriptionpagelink": "Project:Tuwaci ojoro banjibume arara tetun"
 }

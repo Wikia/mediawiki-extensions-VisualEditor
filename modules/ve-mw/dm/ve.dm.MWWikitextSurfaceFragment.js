@@ -1,7 +1,7 @@
 /*!
  * VisualEditor DataModel MWWikitextSurfaceFragment class.
  *
- * @copyright 2011-2020 VisualEditor Team and others; see http://ve.mit-license.org
+ * @copyright See AUTHORS.txt
  */
 
 /**
@@ -28,18 +28,16 @@ OO.inheritClass( ve.dm.MWWikitextSurfaceFragment, ve.dm.SourceSurfaceFragment );
  * @inheritdoc
  */
 ve.dm.MWWikitextSurfaceFragment.prototype.hasMatchingAncestor = function ( type, attributes ) {
-	var i, len, text,
-		nodes = this.getSelectedLeafNodes(),
-		all = !!nodes.length;
+	const nodes = this.getSelectedLeafNodes();
 
-	nodes = this.getSelectedLeafNodes();
-	all = !!nodes.length;
-	for ( i = 0, len = nodes.length; i < len; i++ ) {
-		text = this.document.data.getText( false, nodes[ i ].getRange() );
+	let all = !!nodes.length;
+	for ( let i = 0, len = nodes.length; i < len; i++ ) {
+		const text = this.document.data.getText( false, nodes[ i ].getRange() );
 		// TODO: Use a registry to do this matching
 		switch ( type ) {
 			case 'paragraph':
-				all = !text.match( /^ |^=|^<blockquote>/ );
+				// Anything but what's matched below
+				all = !/^([ =]|<blockquote>)/.test( text );
 				break;
 			case 'mwPreformatted':
 				all = text.slice( 0, 1 ) === ' ';
@@ -48,8 +46,8 @@ ve.dm.MWWikitextSurfaceFragment.prototype.hasMatchingAncestor = function ( type,
 				all = text.slice( 0, 12 ) === '<blockquote>';
 				break;
 			case 'mwHeading':
-				all = text.match( new RegExp( '^={' + attributes.level + '}[^=]' ) ) &&
-					text.match( new RegExp( '[^=]={' + attributes.level + '}$' ) );
+				all = new RegExp( '^={' + attributes.level + '}[^=]' ).test( text ) &&
+					new RegExp( '[^=]={' + attributes.level + '}$' ).test( text );
 				break;
 			default:
 				all = false;
@@ -71,17 +69,15 @@ ve.dm.MWWikitextSurfaceFragment.prototype.hasMatchingAncestor = function ( type,
  * @param {string} before Text to go before selection
  * @param {string} after Text to go after selection
  * @param {Function|string} placeholder Placeholder text to insert at an empty selection
- * @param {boolean} forceWrap Force wrapping, even if matching wrapping exists
+ * @param {boolean} [forceWrap=false] Force wrapping, even if matching wrapping exists
  * @return {ve.dm.MWWikitextSurfaceFragment}
  * @chainable
  */
 ve.dm.MWWikitextSurfaceFragment.prototype.wrapText = function ( before, after, placeholder, forceWrap ) {
-	var wrappedFragment, wasExcludingInsertions;
-
 	placeholder = OO.ui.resolveMsg( placeholder );
 
 	function unwrap( fragment ) {
-		var text = fragment.getText();
+		const text = fragment.getText();
 		if (
 			( !before || text.slice( 0, before.length ) === before ) &&
 			( !after || text.slice( -after.length ) === after )
@@ -102,8 +98,8 @@ ve.dm.MWWikitextSurfaceFragment.prototype.wrapText = function ( before, after, p
 		if ( placeholder && this.getSelection().isCollapsed() ) {
 			this.insertContent( placeholder );
 		}
-		wrappedFragment = this.clone();
-		wasExcludingInsertions = this.willExcludeInsertions();
+		const wrappedFragment = this.clone();
+		const wasExcludingInsertions = this.willExcludeInsertions();
 		this.setExcludeInsertions( true );
 		this.collapseToStart().insertContent( before );
 		this.collapseToEnd().insertContent( after );
@@ -130,26 +126,24 @@ ve.dm.MWWikitextSurfaceFragment.prototype.unwrapText = function ( before, after 
  * @inheritdoc
  */
 ve.dm.MWWikitextSurfaceFragment.prototype.convertToSource = function ( doc ) {
-	var wikitextPromise, progressPromise;
-
 	if ( !doc.data.hasContent() ) {
 		return ve.createDeferred().resolve( '' ).promise();
 	}
 
-	wikitextPromise = ve.init.target.getWikitextFragment( doc, false );
+	const wikitextPromise = ve.init.target.getWikitextFragment( doc, false );
 
 	// TODO: Emit an event to trigger the progress bar
-	progressPromise = ve.init.target.getSurface().createProgress(
+	const progressPromise = ve.init.target.getSurface().createProgress(
 		wikitextPromise, ve.msg( 'visualeditor-generating-wikitext-progress' )
-	).then( function ( progressBar, cancelPromise ) {
-		cancelPromise.fail( function () {
+	).then( ( progressBar, cancelPromise ) => {
+		cancelPromise.fail( () => {
 			wikitextPromise.abort();
 		} );
 	} );
 
-	return ve.promiseAll( [ wikitextPromise, progressPromise ] ).then( function ( wikitext ) {
-		var deferred = ve.createDeferred();
-		setTimeout( function () {
+	return ve.promiseAll( [ wikitextPromise, progressPromise ] ).then( ( wikitext ) => {
+		const deferred = ve.createDeferred();
+		setTimeout( () => {
 			if ( wikitext !== undefined ) {
 				deferred.resolve( wikitext );
 			} else {
@@ -164,25 +158,23 @@ ve.dm.MWWikitextSurfaceFragment.prototype.convertToSource = function ( doc ) {
  * @inheritdoc
  */
 ve.dm.MWWikitextSurfaceFragment.prototype.convertFromSource = function ( source ) {
-	var parsePromise;
+	let parsePromise;
 	if ( !source ) {
 		parsePromise = ve.createDeferred().resolve(
 			ve.dm.Document.static.newBlankDocument()
 		).promise();
 	} else {
-		parsePromise = ve.init.target.parseWikitextFragment( source, false, this.getDocument() ).then( function ( response ) {
-			return ve.dm.converter.getModelFromDom(
-				ve.createDocumentFromHtml( response.visualeditor.content )
-			);
-		} );
+		parsePromise = ve.init.target.parseWikitextFragment( source, false, this.getDocument() ).then( ( response ) => ve.dm.converter.getModelFromDom(
+			ve.createDocumentFromHtml( response.visualeditor.content )
+		) );
 	}
 
 	// TODO: Show progress bar without breaking WindowAction
 	/*
 	ve.init.target.getSurface().createProgress(
 		parsePromise, ve.msg( 'visualeditor-generating-wikitext-progress' )
-	).done( function ( progressBar, cancelPromise ) {
-		cancelPromise.fail( function () {
+	).done( ( progressBar, cancelPromise ) => {
+		cancelPromise.fail( () => {
 			parsePromise.abort();
 		} );
 	} );
