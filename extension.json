@@ -973,6 +973,7 @@
 				"lib/ve/src/ce/ve.ce.LeafNode.js",
 				"lib/ve/src/ce/ve.ce.MetaItem.js",
 				"lib/ve/src/ce/ve.ce.ClassAttributeNode.js",
+				"lib/ve/src/ce/ve.ce.ClipboardHandler.js",
 				"lib/ve/src/ce/ve.ce.AlignableNode.js",
 				"lib/ve/src/ce/ve.ce.FocusableNode.js",
 				"lib/ve/src/ce/ve.ce.ResizableNode.js",
