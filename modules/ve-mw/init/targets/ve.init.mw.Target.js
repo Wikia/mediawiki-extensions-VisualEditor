@@ -568,14 +568,22 @@ ve.init.mw.Target.prototype.getWikitextFragment = function ( doc, useRevision ) 
 		return ve.createDeferred().resolve( '' );
 	}
 
+	// Fandom change:
+	// there is bug in VE with Converter causing to build incorrect HTML
+	// that's why we changed to getHtmlDocument()
+	// e.g. PLATFORM-10328
+	let html = mw.libs.ve.targetSaver.getHtml(doc.getHtmlDocument());
+
+	if (!html.includes('mw:ExtLink')) {
+		html = mw.libs.ve.targetSaver.getHtml(ve.dm.converter.getDomFromModel(doc));
+	}
 	const params = {
 		action: 'visualeditoredit',
 		paction: 'serialize',
-		html: mw.libs.ve.targetSaver.getHtml(
-			ve.dm.converter.getDomFromModel( doc )
-		),
+		html,
 		page: this.getPageName()
 	};
+	// End of Fandom change
 
 	if ( useRevision === undefined || useRevision ) {
 		params.oldid = this.revid;
