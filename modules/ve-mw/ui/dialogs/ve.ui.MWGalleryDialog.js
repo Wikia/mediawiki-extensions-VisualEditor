@@ -249,10 +249,12 @@ ve.ui.MWGalleryDialog.prototype.initialize = function () {
 	} );
 	const altTextSameAsCaptionField = new OO.ui.FieldLayout( this.altTextSameAsCaption, {
 		align: 'inline',
-		label: ve.msg( 'visualeditor-dialog-media-alttext-checkbox' )
+		label: ve.msg( 'visualeditor-dialog-media-alttext-checkbox' ),
+		classes: ['ve-ui-gallery-hidden']
 	} );
 	const highlightedAltTextFieldset = new OO.ui.FieldsetLayout( {
-		label: ve.msg( 'visualeditor-dialog-media-alttext-section' )
+		label: ve.msg( 'visualeditor-dialog-media-alttext-section' ),
+		classes: ['ve-ui-gallery-hidden']
 	} );
 	highlightedAltTextFieldset.addItems( [
 		highlightedAltTextField,
