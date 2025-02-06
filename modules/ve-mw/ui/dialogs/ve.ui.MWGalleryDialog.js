@@ -249,10 +249,12 @@ ve.ui.MWGalleryDialog.prototype.initialize = function () {
 	} );
 	const altTextSameAsCaptionField = new OO.ui.FieldLayout( this.altTextSameAsCaption, {
 		align: 'inline',
-		label: ve.msg( 'visualeditor-dialog-media-alttext-checkbox' )
+		label: ve.msg( 'visualeditor-dialog-media-alttext-checkbox' ),
+		classes: ['ve-ui-gallery-hidden']
 	} );
 	const highlightedAltTextFieldset = new OO.ui.FieldsetLayout( {
-		label: ve.msg( 'visualeditor-dialog-media-alttext-section' )
+		label: ve.msg( 'visualeditor-dialog-media-alttext-section' ),
+		classes: ['ve-ui-gallery-hidden']
 	} );
 	highlightedAltTextFieldset.addItems( [
 		highlightedAltTextField,
@@ -321,7 +323,8 @@ ve.ui.MWGalleryDialog.prototype.initialize = function () {
 
 	// Field layouts
 	const modeField = new OO.ui.FieldLayout( this.modeDropdown, {
-		label: ve.msg( 'visualeditor-mwgallerydialog-mode-field-label' )
+		label: ve.msg( 'visualeditor-mwgallerydialog-mode-field-label' ),
+		classes: ['ve-ui-gallery-hidden']
 	} );
 	const captionField = new OO.ui.FieldLayout( this.captionTarget, {
 		label: ve.msg( 'visualeditor-mwgallerydialog-caption-field-label' ),
@@ -331,19 +334,24 @@ ve.ui.MWGalleryDialog.prototype.initialize = function () {
 		label: ve.msg( 'visualeditor-mwgallerydialog-widths-field-label' )
 	} );
 	const heightsField = new OO.ui.FieldLayout( this.heightsInput, {
-		label: ve.msg( 'visualeditor-mwgallerydialog-heights-field-label' )
+		label: ve.msg( 'visualeditor-mwgallerydialog-heights-field-label' ),
+		classes: ['ve-ui-gallery-hidden']
 	} );
 	const perRowField = new OO.ui.FieldLayout( this.perRowInput, {
-		label: ve.msg( 'visualeditor-mwgallerydialog-perrow-field-label' )
+		label: ve.msg( 'visualeditor-mwgallerydialog-perrow-field-label' ),
+		classes: ['ve-ui-gallery-hidden']
 	} );
 	const showFilenameField = new OO.ui.FieldLayout( this.showFilenameCheckbox, {
-		label: ve.msg( 'visualeditor-mwgallerydialog-show-filename-field-label' )
+		label: ve.msg( 'visualeditor-mwgallerydialog-show-filename-field-label' ),
+		classes: ['ve-ui-gallery-hidden']
 	} );
 	const classesField = new OO.ui.FieldLayout( this.classesInput, {
-		label: ve.msg( 'visualeditor-mwgallerydialog-classes-field-label' )
+		label: ve.msg( 'visualeditor-mwgallerydialog-classes-field-label' ),
+		classes: ['ve-ui-gallery-hidden']
 	} );
 	const stylesField = new OO.ui.FieldLayout( this.stylesInput, {
-		label: ve.msg( 'visualeditor-mwgallerydialog-styles-field-label' )
+		label: ve.msg( 'visualeditor-mwgallerydialog-styles-field-label' ),
+		classes: ['ve-ui-gallery-hidden']
 	} );
 
 	// Append everything
