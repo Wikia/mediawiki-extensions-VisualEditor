@@ -948,35 +948,32 @@ class Hooks implements
 		$veConfig = $services->getConfigFactory()->makeConfig( 'visualeditor' );
 		$isBeta = $veConfig->get( 'VisualEditorEnableBetaFeature' );
 
-		if ( $userOptionsLookup->getOption( $user, 'editortype' ) == '4' ) {
-			// Use the old preference keys to avoid having to migrate data for now.
-			// (One day we might write and run a maintenance script to update the
-			// entries in the database and make this unnecessary.) (T344762)
-			if ( $isBeta ) {
-				$preferences['visualeditor-enable'] = [
-					'type' => 'toggle',
-					'label-message' => 'visualeditor-preference-visualeditor',
-					'section' => 'editing/editor',
-				];
-			} else {
-				$preferences['visualeditor-betatempdisable'] = [
-					'invert' => true,
-					'type' => 'toggle',
-					'label-message' => 'visualeditor-preference-visualeditor',
-					'section' => 'editing/editor',
-					'default' => $userOptionsLookup->getOption( $user, 'visualeditor-betatempdisable' ) ||
-						$userOptionsLookup->getOption( $user, 'visualeditor-autodisable' )
-				];
-			}
+		// Use the old preference keys to avoid having to migrate data for now.
+		// (One day we might write and run a maintenance script to update the
+		// entries in the database and make this unnecessary.) (T344762)
+		if ( $isBeta ) {
+			$preferences['visualeditor-enable'] = [
+				'type' => 'hidden',
+				'label-message' => 'visualeditor-preference-visualeditor',
+				'section' => 'editing/editor',
+				'default' => 1
+			];
+		} else {
+			$preferences['visualeditor-betatempdisable'] = [
+				'type' => 'hidden',
+				'label-message' => 'visualeditor-preference-visualeditor',
+				'section' => 'editing/editor',
+				'default' => 0
+			];
+		}
 
-			if ( $veConfig->get( 'VisualEditorEnableWikitext' ) ) {
-				$preferences['visualeditor-newwikitext'] = [
-					'type' => 'toggle',
-					'label-message' => 'visualeditor-preference-newwikitexteditor-enable',
-					'help-message' => 'visualeditor-preference-newwikitexteditor-help',
-					'section' => 'editing/editor'
-				];
-			}
+		if ( $veConfig->get( 'VisualEditorEnableWikitext' ) ) {
+			$preferences['visualeditor-newwikitext'] = [
+				'type' => 'toggle',
+				'label-message' => 'visualeditor-preference-newwikitexteditor-enable',
+				'help-message' => 'visualeditor-preference-newwikitexteditor-help',
+				'section' => 'editing/editor'
+			];
 		}
 
 		// Config option for Single Edit Tab
