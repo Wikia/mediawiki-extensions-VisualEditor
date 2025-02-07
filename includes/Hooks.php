@@ -953,18 +953,17 @@ class Hooks implements
 		// entries in the database and make this unnecessary.) (T344762)
 		if ( $isBeta ) {
 			$preferences['visualeditor-enable'] = [
-				'type' => 'toggle',
+				'type' => 'hidden',
 				'label-message' => 'visualeditor-preference-visualeditor',
 				'section' => 'editing/editor',
+				'default' => 1
 			];
 		} else {
 			$preferences['visualeditor-betatempdisable'] = [
-				'invert' => true,
-				'type' => 'toggle',
+				'type' => 'hidden',
 				'label-message' => 'visualeditor-preference-visualeditor',
 				'section' => 'editing/editor',
-				'default' => $userOptionsLookup->getOption( $user, 'visualeditor-betatempdisable' ) ||
-					$userOptionsLookup->getOption( $user, 'visualeditor-autodisable' )
+				'default' => 0
 			];
 		}
 
