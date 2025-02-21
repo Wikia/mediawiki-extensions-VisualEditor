@@ -424,7 +424,12 @@ ve.init.mw.DesktopArticleTarget.prototype.activate = function ( dataPromise ) {
  * Edit mode has finished activating
  */
 ve.init.mw.DesktopArticleTarget.prototype.afterActivate = function () {
-	$( 'html' ).removeClass( 've-activating' ).addClass( 've-active' );
+	// eslint-disable-next-line mediawiki/class-doc
+	$( 'html' )
+		// Remove ve-activating when loading for the first time,
+		// and when switching remove previous mode's class.
+		.removeClass( 've-activating ve-active-visual ve-active-source' )
+		.addClass( 've-active ve-active-' + this.getSurface().getMode() );
 
 	// Disable TemplateStyles in the original content
 	// (We do this here because toggling 've-active' class above hides it)
@@ -475,6 +480,9 @@ ve.init.mw.DesktopArticleTarget.prototype.setSurface = function ( surface ) {
  * @param {ve.ui.Surface} surface
  */
 ve.init.mw.DesktopArticleTarget.prototype.setupNewSection = function ( surface ) {
+	if ( surface.getMode() === 'visual' && this.section === 'new' ) {
+		throw new Error( 'Adding new section is not supported in visual mode' );
+	}
 	if ( surface.getMode() === 'source' && this.section === 'new' ) {
 		if ( !this.sectionTitle ) {
 			this.sectionTitle = new OO.ui.TextInputWidget( {

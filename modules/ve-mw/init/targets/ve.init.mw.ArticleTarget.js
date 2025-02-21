@@ -160,6 +160,11 @@ OO.inheritClass( ve.init.mw.ArticleTarget, ve.init.mw.Target );
 ve.init.mw.ArticleTarget.static.name = 'article';
 
 /**
+ * @inheritdoc
+ */
+ve.init.mw.ArticleTarget.static.annotateImportedData = true;
+
+/**
  * Tracking name of target class. Used by ArticleTargetEvents to identify which target we are tracking.
  *
  * @static
@@ -1118,6 +1123,9 @@ ve.init.mw.ArticleTarget.prototype.onSaveDialogRetry = function () {
  * @return {jQuery.Promise} Data promise
  */
 ve.init.mw.ArticleTarget.prototype.load = function ( dataPromise ) {
+	if ( this.getDefaultMode() === 'visual' && this.section === 'new' ) {
+		throw new Error( 'Adding new section is not supported in visual mode' );
+	}
 	// Prevent duplicate requests
 	if ( this.loading ) {
 		return this.loading;
@@ -2114,7 +2122,7 @@ ve.init.mw.ArticleTarget.prototype.restoreEditSection = function () {
 		dmDoc.getNodesByType( 'mwHeading' ).some( ( heading ) => {
 			const domElements = heading.getOriginalDomElements( dmDoc.getStore() );
 			if (
-				domElements && domElements[ 0 ].nodeType === Node.ELEMENT_NODE &&
+				domElements && domElements.length && domElements[ 0 ].nodeType === Node.ELEMENT_NODE &&
 				domElements[ 0 ].getAttribute( 'data-mw-section-id' ) === section
 			) {
 				headingModel = heading;

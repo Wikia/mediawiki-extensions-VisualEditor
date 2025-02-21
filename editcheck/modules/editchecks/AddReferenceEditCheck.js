@@ -7,6 +7,8 @@ OO.inheritClass( mw.editcheck.AddReferenceEditCheck, mw.editcheck.BaseEditCheck 
 
 mw.editcheck.AddReferenceEditCheck.static.name = 'addReference';
 
+mw.editcheck.AddReferenceEditCheck.static.title = ve.msg( 'editcheck-dialog-addref-title' );
+
 mw.editcheck.AddReferenceEditCheck.static.description = ve.msg( 'editcheck-dialog-addref-description' );
 
 mw.editcheck.AddReferenceEditCheck.static.defaultConfig = ve.extendObject( {}, mw.editcheck.BaseEditCheck.static.defaultConfig, {
@@ -14,16 +16,19 @@ mw.editcheck.AddReferenceEditCheck.static.defaultConfig = ve.extendObject( {}, m
 	beforePunctuation: false
 } );
 
+mw.editcheck.AddReferenceEditCheck.static.onlyCoveredNodes = true;
+
 mw.editcheck.AddReferenceEditCheck.prototype.onBeforeSave = function ( surfaceModel ) {
-	return this.findAddedContent( surfaceModel.getDocument() ).map( ( range ) => {
-		const fragment = surfaceModel.getLinearFragment( range );
-		return new mw.editcheck.EditCheckAction( {
-			highlights: [ fragment ],
-			selection: this.adjustForPunctuation( fragment.collapseToEnd() ),
-			check: this
-		} );
-	} );
+	return this.findAddedContent( surfaceModel.getDocument() ).filter( ( range ) => !this.isDismissedRange( range ) )
+		.map(
+			( range ) => new mw.editcheck.EditCheckAction( {
+				fragments: [ surfaceModel.getLinearFragment( range ) ],
+				check: this
+			} )
+		);
 };
+// Only show these before save (for now)
+// mw.editcheck.AddReferenceEditCheck.prototype.onDocumentChange = mw.editcheck.AddReferenceEditCheck.prototype.onBeforeSave;
 
 /**
  * Find content ranges which have been inserted
@@ -54,20 +59,21 @@ mw.editcheck.AddReferenceEditCheck.prototype.findAddedContent = function ( docum
 	return ranges;
 };
 
-mw.editcheck.AddReferenceEditCheck.prototype.act = function ( choice, action, contextItem ) {
+mw.editcheck.AddReferenceEditCheck.prototype.act = function ( choice, action, surface ) {
 	// The complex citoid workflow means that we can't just count on a single "windowAction" here...
-	const windowAction = ve.ui.actionFactory.create( 'window', contextItem.context.getSurface(), 'check' );
+	const windowAction = ve.ui.actionFactory.create( 'window', surface, 'check' );
 	switch ( choice ) {
 		case 'accept':
 			ve.track( 'activity.editCheckReferences', { action: 'edit-check-confirm' } );
-			action.selection.select();
+
+			this.adjustForPunctuation( action.fragments[ 0 ].collapseToEnd() ).select();
 
 			return windowAction.open( 'citoid' ).then( ( instance ) => instance.closing ).then( ( citoidData ) => {
 				const citoidOrCiteDataDeferred = ve.createDeferred();
 				if ( citoidData && citoidData.action === 'manual-choose' ) {
 					// The plain reference dialog has been launched. Wait for the data from
 					// the basic Cite closing promise instead.
-					contextItem.context.getSurface().getDialogs().once( 'closing', ( win, closed, citeData ) => {
+					surface.getDialogs().once( 'closing', ( win, closed, citeData ) => {
 						citoidOrCiteDataDeferred.resolve( citeData );
 					} );
 				} else {
@@ -75,18 +81,11 @@ mw.editcheck.AddReferenceEditCheck.prototype.act = function ( choice, action, co
 					// use the data form the Citoid closing promise.
 					citoidOrCiteDataDeferred.resolve( citoidData );
 				}
-				citoidOrCiteDataDeferred.promise().then( ( data ) => {
-					if ( !data ) {
-						// Reference was not inserted - re-open this context
-						setTimeout( () => {
-							// Deactivate again for mobile after teardown has modified selections
-							contextItem.context.getSurface().getView().deactivate();
-							contextItem.context.afterContextChange();
-						}, 500 );
-					} else {
+				return citoidOrCiteDataDeferred.promise().done( ( data ) => {
+					if ( data ) {
 						// Edit check inspector is already closed by this point, but
 						// we need to end the workflow.
-						contextItem.close( citoidData );
+						mw.notify( ve.msg( 'editcheck-dialog-addref-success-notify' ), { type: 'success' } );
 					}
 				} );
 			} );
@@ -95,23 +94,26 @@ mw.editcheck.AddReferenceEditCheck.prototype.act = function ( choice, action, co
 			return windowAction.open(
 				'editCheckReferencesInspector',
 				{
-					fragment: action.highlights[ 0 ],
-					callback: contextItem.data.callback,
-					saveProcessDeferred: contextItem.data.saveProcessDeferred
+					fragment: action.fragments[ 0 ]
 				}
 			// eslint-disable-next-line arrow-body-style
 			).then( ( instance ) => {
-				// contextItem.openingCitoid = false;
 				return instance.closing;
-			} ).then( ( data ) => {
-				if ( !data ) {
-					// Form was closed, re-open this context
-					contextItem.context.afterContextChange();
-				} else {
-					contextItem.close( data );
+			} ).done( ( data ) => {
+				if ( data && data.action === 'reject' && data.reason ) {
+					mw.editcheck.rejections.push( data.reason );
+					this.dismiss( action );
 				}
 			} );
 	}
+};
+
+/**
+ * @inheritdoc
+ */
+mw.editcheck.AddReferenceEditCheck.prototype.isRangeValid = function ( range, documentModel ) {
+	return range.getLength() >= ( this.config.minimumCharacters || 0 ) &&
+		mw.editcheck.AddReferenceEditCheck.super.prototype.isRangeValid.call( this, range, documentModel );
 };
 
 /**

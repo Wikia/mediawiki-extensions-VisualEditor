@@ -436,6 +436,10 @@ class Hooks implements
 		if ( !$config->get( 'VisualEditorUseSingleEditTab' ) && !$isRedLink ) {
 			return 'wikitext';
 		}
+		// Adding a new section is not supported in visual mode
+		if ( $req->getRawVal( 'section' ) === 'new' ) {
+			return 'wikitext';
+		}
 		return self::getPreferredEditor( $user, $req, !$isRedLink );
 	}
 
@@ -1021,6 +1025,7 @@ class Hooks implements
 		$preferences['visualeditor-findAndReplace-regex'] = $api;
 		$preferences['visualeditor-findAndReplace-matchCase'] = $api;
 		$preferences['visualeditor-findAndReplace-word'] = $api;
+		$preferences['visualeditor-symbolList-recentlyUsed-specialCharacters'] = $api;
 	}
 
 	/**
@@ -1158,6 +1163,8 @@ class Hooks implements
 			'useChangeTagging' => $veConfig->get( 'VisualEditorUseChangeTagging' ),
 			'editCheckTagging' => $veConfig->get( 'VisualEditorEditCheckTagging' ),
 			'editCheck' => $veConfig->get( 'VisualEditorEditCheck' ),
+			'editCheckSingle' => $veConfig->get( 'VisualEditorEditCheckSingleCheckMode' ),
+			'editCheckExperimental' => $veConfig->get( 'VisualEditorEditCheckLoadExperimental' ),
 			'editCheckABTest' => $veConfig->get( 'VisualEditorEditCheckABTest' ),
 			'editCheckReliabilityAvailable' => ApiEditCheckReferenceUrl::isAvailable(),
 			'namespacesWithSubpages' => $namespacesWithSubpagesEnabled,
