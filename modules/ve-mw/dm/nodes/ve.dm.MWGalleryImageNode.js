@@ -216,7 +216,7 @@ ve.dm.MWGalleryImageNode.static.toDomElements = function ( data, doc, converter 
 		img.appendChild( doc.createTextNode( attributes.errorText ? attributes.errorText : filename ) );
 	} else {
 		const srcAttr = ve.dm.MWImageNode.static.tagsToSrcAttrs[ img.nodeName.toLowerCase() ];
-		img.setAttribute( srcAttr, attributes.src );
+		srcAttr && img.setAttribute( srcAttr, attributes.src );
 	}
 	img.setAttribute( attributes.isError ? 'data-width' : 'width', attributes.width );
 	img.setAttribute( attributes.isError ? 'data-height' : 'height', attributes.height );
