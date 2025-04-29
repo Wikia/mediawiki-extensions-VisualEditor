@@ -1,4 +1,4 @@
 [submodule "lib/ve"]
 	path = lib/ve
-	url = https://github.com/Wikia/VisualEditor/
+	url = https://github.com/Wikia/VisualEditor.git
 	branch = REL1_43-fandom
