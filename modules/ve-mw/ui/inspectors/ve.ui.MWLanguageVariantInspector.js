@@ -147,7 +147,10 @@ ve.ui.MWLanguageVariantInspector.prototype.createTextTarget = function ( placeho
  * @return {ve.dm.Document} The document model now backing the widget.
  */
 ve.ui.MWLanguageVariantInspector.prototype.setupTextTargetDoc = function ( textTarget, htmlString ) {
-	const doc = this.variantNode.getDocument().newFromHtml( htmlString );
+	// Fandom change: sanitize preview HTML from data-mw-variant
+	const doc = this.variantNode.getDocument().newFromHtml(
+		ve.sanitizeHtmlToDocument( htmlString )
+	);
 	textTarget.setDocument( doc );
 	return doc;
 };

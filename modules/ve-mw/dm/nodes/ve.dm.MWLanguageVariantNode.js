@@ -190,7 +190,18 @@ ve.dm.MWLanguageVariantNode.static.processVariants = function ( container, opts 
  */
 ve.dm.MWLanguageVariantNode.static.insertPreviewElements = function ( element, variantInfo, opts ) {
 	// Note that `element` can't be a <meta> (or other void tag)
-	element.innerHTML = this.getPreviewHtml( variantInfo, opts );
+	// Fandom change:
+	// data-mw-variant can come from pasted HTML, so never assign it via
+	// innerHTML (event handlers would fire in the live document); sanitize first.
+	const doc = element.ownerDocument;
+	element.textContent = '';
+	Array.prototype.forEach.call(
+		ve.sanitizeHtml( this.getPreviewHtml( variantInfo, opts ) ),
+		( node ) => {
+			element.appendChild( doc.importNode( node, true ) );
+		}
+	);
+	// End of Fandom change
 	// This recurses into the children added by the `html` clause to ensure
 	// that nested variants are expanded.
 	this.processVariants( element, opts );
