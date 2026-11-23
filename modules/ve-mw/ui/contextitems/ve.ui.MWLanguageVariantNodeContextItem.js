@@ -132,7 +132,7 @@ ve.ui.MWLanguageVariantNodeContextItem.prototype.renderBody = function () {
 				) );
 
 			variantInfo.oneway.forEach( ( item ) => {
-				// Fandom change: sanitize, data-mw-variant can come from pasted HTML
+				// Sanitize, as for ve.dm.MWLanguageVariantNode.static.insertPreviewElements
 				const $fromText = $( '<td>' ).append( $( ve.sanitizeHtml( item.f ) ) ),
 					$toText = $( '<td>' ).append( $( ve.sanitizeHtml( item.t ) ) ),
 					code = item.l,
@@ -163,7 +163,7 @@ ve.ui.MWLanguageVariantNodeContextItem.prototype.renderBody = function () {
 			variantInfo.twoway.forEach( ( item ) => {
 				const code = item.l,
 					name = languageNameIfKnown( code.toLowerCase() ),
-					// Fandom change: sanitize, data-mw-variant can come from pasted HTML
+					// Sanitize, as for ve.dm.MWLanguageVariantNode.static.insertPreviewElements
 					$text = $( '<td>' ).append( $( ve.sanitizeHtml( item.t ) ) );
 				ve.dm.MWLanguageVariantNode.static.processVariants(
 					$text[ 0 ], { showHidden: true }
